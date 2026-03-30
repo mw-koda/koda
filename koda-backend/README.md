@@ -31,6 +31,18 @@
 $ npm install
 ```
 
+## Supabase setup (backend)
+
+1. Copy `.env.example` to `.env`.
+2. Fill in `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from your Supabase project settings.
+3. Start the app.
+
+```bash
+$ npm run start:dev
+```
+
+Use `SupabaseService` from `src/supabase/supabase.service.ts` in your providers/controllers when you want to run database/auth/storage operations against Supabase.
+
 ## Compile and run the project
 
 ```bash
