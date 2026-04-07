@@ -34,7 +34,7 @@ export function Sidebar() {
 
   const navigation = [
     { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
-    { name: 'Intern Management', href: '/interns', icon: Users },
+    { name: 'Intern Management', href: '/coordinator/intern-management', icon: Users },
     { name: 'Reports & Performance', href: '/reports', icon: ClipboardList },
     { name: 'Issue Tracking', href: '/issues', icon: GitPullRequest },
   ];
