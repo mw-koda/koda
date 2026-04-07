@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { BatchesService } from './batches.service';
 import { AssignInternsDto } from './dto/assign-interns.dto';
 import { CreateBatchDto } from './dto/create-batch.dto';
