@@ -109,7 +109,10 @@ export class BatchesService {
 
     const enrolledCounts = new Map<string, number>();
     for (const row of enrollmentsResult.data ?? []) {
-      enrolledCounts.set(row.batch_id, (enrolledCounts.get(row.batch_id) ?? 0) + 1);
+      enrolledCounts.set(
+        row.batch_id,
+        (enrolledCounts.get(row.batch_id) ?? 0) + 1,
+      );
     }
 
     return (batchesResult.data ?? []).map((batch) =>
@@ -121,13 +124,16 @@ export class BatchesService {
     return this.getBatchDetail(id);
   }
 
-  async update(id: string, updateBatchDto: UpdateBatchDto): Promise<BatchDetail> {
+  async update(
+    id: string,
+    updateBatchDto: UpdateBatchDto,
+  ): Promise<BatchDetail> {
     const existingBatch = await this.getBatchRowOrThrow(id);
     const nextPayload = this.buildBatchPayload({
       name: updateBatchDto.name ?? existingBatch.name,
       description:
         updateBatchDto.description === undefined
-          ? existingBatch.description ?? undefined
+          ? (existingBatch.description ?? undefined)
           : updateBatchDto.description,
       startDate: updateBatchDto.startDate ?? existingBatch.start_date,
       endDate: updateBatchDto.endDate ?? existingBatch.end_date,
@@ -161,7 +167,10 @@ export class BatchesService {
     return this.getBatchDetail(data.id);
   }
 
-  async assignInterns(id: string, assignInternsDto: AssignInternsDto): Promise<BatchDetail> {
+  async assignInterns(
+    id: string,
+    assignInternsDto: AssignInternsDto,
+  ): Promise<BatchDetail> {
     const internIds = Array.from(new Set(assignInternsDto.internIds));
     if (!internIds.length) {
       throw new BadRequestException('At least one intern ID is required.');
@@ -177,7 +186,9 @@ export class BatchesService {
     const supabase = this.supabaseService.getClient();
     const { data: interns, error: internsError } = await supabase
       .from('interns')
-      .select('id, user_id, team_id, created_at, users:user_id(id, name, email, github_username)')
+      .select(
+        'id, user_id, team_id, created_at, users:user_id(id, name, email, github_username)',
+      )
       .in('id', internIds)
       .order('created_at', { ascending: true });
 
@@ -186,17 +197,20 @@ export class BatchesService {
     }
 
     const foundInternIds = new Set((interns ?? []).map((intern) => intern.id));
-    const missingInternIds = internIds.filter((internId) => !foundInternIds.has(internId));
+    const missingInternIds = internIds.filter(
+      (internId) => !foundInternIds.has(internId),
+    );
     if (missingInternIds.length > 0) {
       throw new BadRequestException(
         `The following interns were not found: ${missingInternIds.join(', ')}`,
       );
     }
 
-    const { data: existingAssignments, error: assignmentLookupError } = await supabase
-      .from('batch_interns')
-      .select('intern_id, batch_id')
-      .in('intern_id', internIds);
+    const { data: existingAssignments, error: assignmentLookupError } =
+      await supabase
+        .from('batch_interns')
+        .select('intern_id, batch_id')
+        .in('intern_id', internIds);
 
     if (assignmentLookupError) {
       throw new BadRequestException(assignmentLookupError.message);
@@ -213,7 +227,9 @@ export class BatchesService {
         );
       }
 
-      throw new ConflictException('One or more interns are already assigned to this batch.');
+      throw new ConflictException(
+        'One or more interns are already assigned to this batch.',
+      );
     }
 
     const { error: insertError } = await supabase.from('batch_interns').insert(
@@ -243,7 +259,11 @@ export class BatchesService {
 
   private async getBatchRowOrThrow(id: string): Promise<BatchRow> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase.from('batches').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('batches')
+      .select('*')
+      .eq('id', id)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException('Batch not found.');
@@ -287,17 +307,23 @@ export class BatchesService {
 
     const { data: interns, error: internsError } = await supabase
       .from('interns')
-      .select('id, user_id, team_id, users:user_id(id, name, email, github_username)')
+      .select(
+        'id, user_id, team_id, users:user_id(id, name, email, github_username)',
+      )
       .in('id', internIds);
 
     if (internsError) {
       throw new BadRequestException(internsError.message);
     }
 
-    const internById = new Map((interns ?? []).map((intern) => [intern.id, intern]));
+    const internById = new Map(
+      (interns ?? []).map((intern) => [intern.id, intern]),
+    );
 
     return (relations ?? []).map((relation) => {
-      const intern = internById.get(relation.intern_id) as InternRow | undefined;
+      const intern = internById.get(relation.intern_id) as
+        | InternRow
+        | undefined;
 
       return {
         id: relation.intern_id,
@@ -311,7 +337,10 @@ export class BatchesService {
     });
   }
 
-  private mapBatchSummary(batch: BatchRow, enrolledCount: number): BatchSummary {
+  private mapBatchSummary(
+    batch: BatchRow,
+    enrolledCount: number,
+  ): BatchSummary {
     return {
       id: batch.id,
       name: batch.name,
@@ -336,7 +365,10 @@ export class BatchesService {
     const description = input.description?.trim();
     const startDate = this.normalizeDate(input.startDate);
     const endDate = this.normalizeDate(input.endDate);
-    const maxInterns = this.normalizePositiveInteger(input.maxInterns, 'maxInterns');
+    const maxInterns = this.normalizePositiveInteger(
+      input.maxInterns,
+      'maxInterns',
+    );
 
     return {
       name,
@@ -360,7 +392,10 @@ export class BatchesService {
     return parsedDate.toISOString().slice(0, 10);
   }
 
-  private normalizePositiveInteger(value: number | undefined, fieldName: string): number {
+  private normalizePositiveInteger(
+    value: number | undefined,
+    fieldName: string,
+  ): number {
     if (value === undefined || value === null) {
       throw new BadRequestException(`${fieldName} is required.`);
     }
