@@ -632,7 +632,7 @@ export const currentUser = roleToUserMap.coordinator;
 
 // Dev toggle: change role to 'admin' | 'coordinator' | 'team-lead' | 'intern' to access that dashboard after login.
 export const mockAuthConfig: { role: UserRole; organizationId?: string } = {
-  role: 'intern',
+  role: 'coordinator',
   // Set to 'org-1' to skip the join-organization prompt for interns.
   organizationId: undefined,
 };

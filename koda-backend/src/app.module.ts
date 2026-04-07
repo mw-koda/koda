@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { BatchesModule } from './batches/batches.module';
+import { PerformanceModule } from './performance/performance.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { IssuesModule } from './issues/issues.module';
 
@@ -14,6 +15,9 @@ import { IssuesModule } from './issues/issues.module';
     SupabaseModule,
     BatchesModule,
     IssuesModule,
+    SupabaseModule,
+    BatchesModule,
+    PerformanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
