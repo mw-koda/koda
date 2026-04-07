@@ -68,24 +68,32 @@ export class BatchesService {
     this.assertDateRange(payload.start_date, payload.end_date);
 
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    const result = (await supabase
       .from('batches')
       .insert(payload)
       .select('*')
-      .single();
+      .single()) as unknown as {
+      data: BatchRow | null;
+      error: { message: string } | null;
+    };
 
-    if (error) {
-      throw new BadRequestException(error.message);
+    if (result.error || !result.data) {
+      throw new BadRequestException(
+        result.error?.message ?? 'Failed to create batch.',
+      );
     }
 
-    return this.getBatchDetail(data.id);
+    return this.getBatchDetail(result.data.id);
   }
 
   async findAll(search?: string): Promise<BatchSummary[]> {
     const supabase = this.supabaseService.getClient();
-    let query = supabase.from('batches').select('*').order('created_at', {
-      ascending: false,
-    });
+    let query = supabase
+      .from<BatchRow>('batches')
+      .select('*')
+      .order('created_at', {
+        ascending: false,
+      });
 
     const normalizedSearch = search?.trim();
     if (normalizedSearch) {
@@ -94,10 +102,16 @@ export class BatchesService {
       );
     }
 
-    const [batchesResult, enrollmentsResult] = await Promise.all([
+    const [batchesResult, enrollmentsResult] = (await Promise.all([
       query,
-      supabase.from('batch_interns').select('batch_id'),
-    ]);
+      supabase.from<{ batch_id: string }>('batch_interns').select('batch_id'),
+    ])) as unknown as [
+      { data: BatchRow[] | null; error: { message: string } | null },
+      {
+        data: Array<{ batch_id: string }> | null;
+        error: { message: string } | null;
+      },
+    ];
 
     if (batchesResult.error) {
       throw new BadRequestException(batchesResult.error.message);
@@ -109,7 +123,10 @@ export class BatchesService {
 
     const enrolledCounts = new Map<string, number>();
     for (const row of enrollmentsResult.data ?? []) {
-      enrolledCounts.set(row.batch_id, (enrolledCounts.get(row.batch_id) ?? 0) + 1);
+      enrolledCounts.set(
+        row.batch_id,
+        (enrolledCounts.get(row.batch_id) ?? 0) + 1,
+      );
     }
 
     return (batchesResult.data ?? []).map((batch) =>
@@ -121,13 +138,16 @@ export class BatchesService {
     return this.getBatchDetail(id);
   }
 
-  async update(id: string, updateBatchDto: UpdateBatchDto): Promise<BatchDetail> {
+  async update(
+    id: string,
+    updateBatchDto: UpdateBatchDto,
+  ): Promise<BatchDetail> {
     const existingBatch = await this.getBatchRowOrThrow(id);
     const nextPayload = this.buildBatchPayload({
       name: updateBatchDto.name ?? existingBatch.name,
       description:
         updateBatchDto.description === undefined
-          ? existingBatch.description ?? undefined
+          ? (existingBatch.description ?? undefined)
           : updateBatchDto.description,
       startDate: updateBatchDto.startDate ?? existingBatch.start_date,
       endDate: updateBatchDto.endDate ?? existingBatch.end_date,
@@ -144,7 +164,7 @@ export class BatchesService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
+    const result = (await supabase
       .from('batches')
       .update({
         ...nextPayload,
@@ -152,16 +172,24 @@ export class BatchesService {
       })
       .eq('id', id)
       .select('*')
-      .single();
+      .single()) as unknown as {
+      data: BatchRow | null;
+      error: { message: string } | null;
+    };
 
-    if (error) {
-      throw new BadRequestException(error.message);
+    if (result.error || !result.data) {
+      throw new BadRequestException(
+        result.error?.message ?? 'Failed to update batch.',
+      );
     }
 
-    return this.getBatchDetail(data.id);
+    return this.getBatchDetail(result.data.id);
   }
 
-  async assignInterns(id: string, assignInternsDto: AssignInternsDto): Promise<BatchDetail> {
+  async assignInterns(
+    id: string,
+    assignInternsDto: AssignInternsDto,
+  ): Promise<BatchDetail> {
     const internIds = Array.from(new Set(assignInternsDto.internIds));
     if (!internIds.length) {
       throw new BadRequestException('At least one intern ID is required.');
@@ -175,35 +203,47 @@ export class BatchesService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const { data: interns, error: internsError } = await supabase
+    const internsResult = (await supabase
       .from('interns')
-      .select('id, user_id, team_id, created_at, users:user_id(id, name, email, github_username)')
+      .select(
+        'id, user_id, team_id, created_at, users:user_id(id, name, email, github_username)',
+      )
       .in('id', internIds)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })) as unknown as {
+      data: InternRow[] | null;
+      error: { message: string } | null;
+    };
 
-    if (internsError) {
-      throw new BadRequestException(internsError.message);
+    if (internsResult.error) {
+      throw new BadRequestException(internsResult.error.message);
     }
 
-    const foundInternIds = new Set((interns ?? []).map((intern) => intern.id));
-    const missingInternIds = internIds.filter((internId) => !foundInternIds.has(internId));
+    const interns = internsResult.data ?? [];
+    const foundInternIds = new Set(interns.map((intern) => intern.id));
+    const missingInternIds = internIds.filter(
+      (internId) => !foundInternIds.has(internId),
+    );
     if (missingInternIds.length > 0) {
       throw new BadRequestException(
         `The following interns were not found: ${missingInternIds.join(', ')}`,
       );
     }
 
-    const { data: existingAssignments, error: assignmentLookupError } = await supabase
+    const existingAssignmentsResult = (await supabase
       .from('batch_interns')
       .select('intern_id, batch_id')
-      .in('intern_id', internIds);
+      .in('intern_id', internIds)) as unknown as {
+      data: Array<{ intern_id: string; batch_id: string }> | null;
+      error: { message: string } | null;
+    };
 
-    if (assignmentLookupError) {
-      throw new BadRequestException(assignmentLookupError.message);
+    if (existingAssignmentsResult.error) {
+      throw new BadRequestException(existingAssignmentsResult.error.message);
     }
 
-    if ((existingAssignments ?? []).length > 0) {
-      const alreadyAssigned = (existingAssignments ?? [])
+    const existingAssignments = existingAssignmentsResult.data ?? [];
+    if (existingAssignments.length > 0) {
+      const alreadyAssigned = existingAssignments
         .filter((assignment) => assignment.batch_id !== id)
         .map((assignment) => assignment.intern_id);
 
@@ -213,7 +253,9 @@ export class BatchesService {
         );
       }
 
-      throw new ConflictException('One or more interns are already assigned to this batch.');
+      throw new ConflictException(
+        'One or more interns are already assigned to this batch.',
+      );
     }
 
     const { error: insertError } = await supabase.from('batch_interns').insert(
@@ -243,13 +285,20 @@ export class BatchesService {
 
   private async getBatchRowOrThrow(id: string): Promise<BatchRow> {
     const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase.from('batches').select('*').eq('id', id).single();
+    const result = (await supabase
+      .from('batches')
+      .select('*')
+      .eq('id', id)
+      .single()) as unknown as {
+      data: BatchRow | null;
+      error: { message: string } | null;
+    };
 
-    if (error || !data) {
+    if (result.error || !result.data) {
       throw new NotFoundException('Batch not found.');
     }
 
-    return data;
+    return result.data;
   }
 
   private async getEnrolledCount(batchId: string): Promise<number> {
@@ -270,34 +319,49 @@ export class BatchesService {
     batchId: string,
   ): Promise<BatchDetail['assignedInterns']> {
     const supabase = this.supabaseService.getClient();
-    const { data: relations, error: relationsError } = await supabase
+    const relationsResult = (await supabase
       .from('batch_interns')
       .select('batch_id, intern_id, assigned_at')
       .eq('batch_id', batchId)
-      .order('assigned_at', { ascending: true });
+      .order('assigned_at', { ascending: true })) as unknown as {
+      data: Array<{
+        batch_id: string;
+        intern_id: string;
+        assigned_at: string | null;
+      }> | null;
+      error: { message: string } | null;
+    };
 
-    if (relationsError) {
-      throw new BadRequestException(relationsError.message);
+    if (relationsResult.error) {
+      throw new BadRequestException(relationsResult.error.message);
     }
 
-    const internIds = (relations ?? []).map((relation) => relation.intern_id);
+    const relations = relationsResult.data ?? [];
+    const internIds = relations.map((relation) => relation.intern_id);
     if (internIds.length === 0) {
       return [];
     }
 
-    const { data: interns, error: internsError } = await supabase
+    const internsResult = (await supabase
       .from('interns')
-      .select('id, user_id, team_id, users:user_id(id, name, email, github_username)')
-      .in('id', internIds);
+      .select(
+        'id, user_id, team_id, users:user_id(id, name, email, github_username)',
+      )
+      .in('id', internIds)) as unknown as {
+      data: InternRow[] | null;
+      error: { message: string } | null;
+    };
 
-    if (internsError) {
-      throw new BadRequestException(internsError.message);
+    if (internsResult.error) {
+      throw new BadRequestException(internsResult.error.message);
     }
 
-    const internById = new Map((interns ?? []).map((intern) => [intern.id, intern]));
+    const internById = new Map(
+      (internsResult.data ?? []).map((intern) => [intern.id, intern]),
+    );
 
-    return (relations ?? []).map((relation) => {
-      const intern = internById.get(relation.intern_id) as InternRow | undefined;
+    return relations.map((relation) => {
+      const intern = internById.get(relation.intern_id);
 
       return {
         id: relation.intern_id,
@@ -311,7 +375,10 @@ export class BatchesService {
     });
   }
 
-  private mapBatchSummary(batch: BatchRow, enrolledCount: number): BatchSummary {
+  private mapBatchSummary(
+    batch: BatchRow,
+    enrolledCount: number,
+  ): BatchSummary {
     return {
       id: batch.id,
       name: batch.name,
@@ -336,7 +403,10 @@ export class BatchesService {
     const description = input.description?.trim();
     const startDate = this.normalizeDate(input.startDate);
     const endDate = this.normalizeDate(input.endDate);
-    const maxInterns = this.normalizePositiveInteger(input.maxInterns, 'maxInterns');
+    const maxInterns = this.normalizePositiveInteger(
+      input.maxInterns,
+      'maxInterns',
+    );
 
     return {
       name,
@@ -360,7 +430,10 @@ export class BatchesService {
     return parsedDate.toISOString().slice(0, 10);
   }
 
-  private normalizePositiveInteger(value: number | undefined, fieldName: string): number {
+  private normalizePositiveInteger(
+    value: number | undefined,
+    fieldName: string,
+  ): number {
     if (value === undefined || value === null) {
       throw new BadRequestException(`${fieldName} is required.`);
     }
