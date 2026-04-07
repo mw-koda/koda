@@ -1,0 +1,19 @@
+meta {
+  name: Get Team Details
+  type: http
+  seq: 4
+}
+
+get {
+  url: http://localhost:3000/teams/{{teamId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+settings {
+  encodeUrl: true
+}

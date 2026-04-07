@@ -1,0 +1,26 @@
+meta {
+  name: Add Team Member
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:3000/teams/{{teamId}}/members
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "userId": "user-uuid-here",
+    "role": "INTERN"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

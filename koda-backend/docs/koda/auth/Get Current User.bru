@@ -1,0 +1,24 @@
+meta {
+  name: Get Current User
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:3000/auth/me/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxZDAxNWFmNC0xYzU5LTRjNDQtOTdjMS0wZTUxMDY0NTE5OTEiLCJyb2xlIjoiaW50ZXJuIiwiaWF0IjoxNzc1NDk3MzY2LCJleHAiOjE3NzYxMDIxNjZ9.UBNMD0okQoEFWMZea93yJ7XsrQ5veY7ZvKC1BR_Kc2Y
+  body: none
+  auth: bearer
+}
+
+params:query {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxZDAxNWFmNC0xYzU5LTRjNDQtOTdjMS0wZTUxMDY0NTE5OTEiLCJyb2xlIjoiaW50ZXJuIiwiaWF0IjoxNzc1NDk3MzY2LCJleHAiOjE3NzYxMDIxNjZ9.UBNMD0okQoEFWMZea93yJ7XsrQ5veY7ZvKC1BR_Kc2Y
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

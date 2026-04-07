@@ -1,0 +1,20 @@
+meta {
+  name: Remove a specific assignment
+  type: http
+  seq: 3
+}
+
+delete {
+  url: http://localhost:3000/issues/:issueId/assignments/:assignmentId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  issueId: 
+  assignmentId: 
+}
+
+settings {
+  encodeUrl: true
+}

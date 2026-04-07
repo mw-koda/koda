@@ -1,0 +1,25 @@
+meta {
+  name: Create Team
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:3000/teams
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Team Alpha"
+  }
+}
+
+settings {
+  encodeUrl: true
+}
