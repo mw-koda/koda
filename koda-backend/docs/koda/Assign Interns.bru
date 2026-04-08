@@ -1,0 +1,21 @@
+meta {
+  name: Assign Interns
+  type: http
+  seq: 14
+}
+
+post {
+  url: http://localhost:3000/batches/{{batchId}}/interns
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "internIds": ["{{userId}}"]
+  }
+}
+
+settings {
+  encodeUrl: true
+}

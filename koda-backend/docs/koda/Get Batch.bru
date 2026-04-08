@@ -1,0 +1,15 @@
+meta {
+  name: Get Batch
+  type: http
+  seq: 13
+}
+
+get {
+  url: http://localhost:3000/batches/{{batchId}}
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}
