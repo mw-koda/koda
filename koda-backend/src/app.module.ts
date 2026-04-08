@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DefaultAdminSeeder } from './auth/default-admin.seeder';
 import { AuthModule } from './auth/auth.module';
 import { BatchesModule } from './batches/batches.module';
 import { PerformanceModule } from './performance/performance.module';
@@ -22,6 +23,6 @@ import { TeamsModule } from './teams/teams.module';
     TeamsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, DefaultAdminSeeder],
 })
 export class AppModule {}
