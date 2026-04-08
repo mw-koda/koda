@@ -89,7 +89,7 @@ export class BatchesService {
   async findAll(search?: string): Promise<BatchSummary[]> {
     const supabase = this.supabaseService.getClient();
     let query = supabase
-      .from<BatchRow>('batches')
+      .from('batches')
       .select('*')
       .order('created_at', {
         ascending: false,
@@ -104,7 +104,7 @@ export class BatchesService {
 
     const [batchesResult, enrollmentsResult] = (await Promise.all([
       query,
-      supabase.from<{ batch_id: string }>('batch_interns').select('batch_id'),
+      supabase.from('batch_interns').select('batch_id'),
     ])) as unknown as [
       { data: BatchRow[] | null; error: { message: string } | null },
       {

@@ -7,6 +7,7 @@ import { BatchesModule } from './batches/batches.module';
 import { PerformanceModule } from './performance/performance.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { IssuesModule } from './issues/issues.module';
+import { TeamsModule } from './teams/teams.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { IssuesModule } from './issues/issues.module';
     SupabaseModule,
     BatchesModule,
     PerformanceModule,
+    TeamsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
