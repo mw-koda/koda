@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'KODA - Knowledge, Oversight, and Development Analytics',
@@ -36,6 +37,7 @@ export default function RootLayout({
         <main className="ml-60 mt-14 min-h-screen">
           {children}
         </main>
+        <Toaster />
       </body>
     </html>
   );
