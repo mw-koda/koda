@@ -60,13 +60,16 @@ type TeamDetail = {
 export class TeamsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async create(createTeamDto: CreateTeamDto): Promise<TeamDetail> {
+  async create(
+    createTeamDto: CreateTeamDto,
+    creatorId: string,
+  ): Promise<TeamDetail> {
     const teamName = createTeamDto.name?.trim();
     if (!teamName) {
       throw new BadRequestException('Team name is required.');
     }
 
-    const creator = await this.getUserOrThrow(createTeamDto.createdBy);
+    const creator = await this.getUserOrThrow(creatorId);
     if (creator.role !== Role.TEAM_LEAD && creator.role !== Role.COORDINATOR) {
       throw new BadRequestException(
         'Only users with team_lead or coordinator role can create teams.',
@@ -78,7 +81,7 @@ export class TeamsService {
       .from('teams')
       .insert({
         name: teamName,
-        created_by: createTeamDto.createdBy,
+        created_by: creatorId,
       })
       .select('id')
       .single()) as unknown as {
