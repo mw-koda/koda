@@ -1,0 +1,24 @@
+meta {
+  name: Get Issues by Intern
+  type: http
+  seq: 8
+}
+
+get {
+  url: http://localhost:3000/issues/intern/{{userId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+}
+
+settings {
+  encodeUrl: true
+}

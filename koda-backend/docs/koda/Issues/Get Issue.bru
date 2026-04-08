@@ -1,0 +1,19 @@
+meta {
+  name: Get Issue
+  type: http
+  seq: 9
+}
+
+get {
+  url: http://localhost:3000/issues/{{issueId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+settings {
+  encodeUrl: true
+}

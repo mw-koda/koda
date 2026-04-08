@@ -1,0 +1,27 @@
+meta {
+  name: Onboard User
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:3000/users/onboard
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: 1d015af4-1c59-4c44-97c1-0e5106451991
+}
+
+body:json {
+  {
+    "userId": "1d015af4-1c59-4c44-97c1-0e5106451991",
+    "role": "intern"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
