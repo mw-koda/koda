@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { users } from '@/lib/mock-data';
+import * as mockData from '@/lib/mock-data';
+import AdminOnboardingView from './onboarding-view';
+
 
 function getUserStatusClass(status: string) {
   switch (status) {
@@ -29,6 +31,14 @@ export default function AdminDashboardPage() {
   if (!isMounted) {
     return <div className="p-8 text-text-muted">Loading dashboard...</div>;
   }
+
+  const batches = mockData.batches ?? [];
+  const users = mockData.users;
+
+  const showOnboarding = batches.length === 0;
+  if(showOnboarding) {
+    return <AdminOnboardingView />;
+  } 
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
