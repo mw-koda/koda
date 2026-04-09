@@ -22,12 +22,20 @@ const adminNavigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [isMounted, setIsMounted] = useState(false);
   const [currentRole, setCurrentRole] = useState<string>('coordinator');
 
   useEffect(() => {
+    setIsMounted(true);
     const selectedRole = localStorage.getItem('selectedRole') || 'coordinator';
     setCurrentRole(selectedRole);
   }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="fixed left-0 top-0 h-screen w-60 bg-bg-surface border-r border-border-color" />
+    );
+  }
 
   const dashboardHref = roleRedirects[currentRole as UserRole] || '/login';
   const isDashboardRoute = pathname === dashboardHref || pathname.startsWith(dashboardHref + '/');
