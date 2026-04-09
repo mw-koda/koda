@@ -67,6 +67,7 @@ export interface Batch {
   startDate: string;
   endDate: string;
   maxInterns: number;
+  enrolledCount: number;
   description?: string;
 }
 
@@ -472,6 +473,29 @@ export const reports: Report[] = [
 ];
 
 export const batches: Batch[] = [];
+
+export const batchCatalog: Batch[] = [
+  {
+    id: 'batch-2024-q1',
+    name: 'Metawatt Q1 2024 Cohort',
+    startDate: '2024-01-15',
+    endDate: '2024-03-29',
+    maxInterns: 8,
+    enrolledCount: 8,
+    description:
+      'Primary delivery cohort for the Metawatt internship program, covering frontend, backend, and platform work.',
+  },
+  {
+    id: 'batch-2024-q2',
+    name: 'KODA Platform Sprint Cohort',
+    startDate: '2024-04-08',
+    endDate: '2024-06-28',
+    maxInterns: 6,
+    enrolledCount: 4,
+    description:
+      'Focused batch for internal platform improvements and operational tooling across the KODA stack.',
+  },
+];
 
 export const users: User[] = [
   {
