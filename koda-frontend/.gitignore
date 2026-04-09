@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE - IntelliJ/JetBrains
+.idea/
+*.iml
+
+# Discord specific config
+.idea/discord.xml
