@@ -4,14 +4,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Github } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { mockAuthConfig, roleRedirects } from '@/lib/mock-data';
-
+// import { mockAuthConfig, roleRedirects } from '@/lib/mock-data';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-gradient-to-br from-bg-surface via-bg-elevated to-bg-surface overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-bg-surface via-bg-elevated to-bg-surface overflow-hidden flex items-center justify-center">
       {/* Animated background elements */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-accent-primary/5 rounded-full blur-3xl animate-pulse" />
@@ -50,17 +49,7 @@ export default function LoginPage() {
           <Button
             onClick={() => {
               setIsLoading(true);
-              // Temporary mock until OAuth is ready.
-              const { role, organizationId } = mockAuthConfig;
-              localStorage.setItem('selectedRole', role);
-              if (organizationId) {
-                localStorage.setItem('userOrganizationId', organizationId);
-              } else {
-                localStorage.removeItem('userOrganizationId');
-              }
-              setTimeout(() => {
-                router.push(roleRedirects[role]);
-              }, 500);
+              window.location.href = `${API_URL}/auth/github`;
             }}
             disabled={isLoading}
             className={`w-full px-6 py-3 rounded-xl font-semibold text-lg flex items-center justify-center gap-3 transition-all duration-300 ${
@@ -70,13 +59,13 @@ export default function LoginPage() {
             }`}
           >
             <Github className="w-5 h-5" />
-            {isLoading ? 'Signing in...' : 'Continue with GitHub'}
+            {isLoading ? 'Signing in...' : 'Continue with GitHub'}  
           </Button>
 
           {/* Info Message */}
           <div className="mt-6 pt-6 border-t border-border-color/20">
             <p className="text-xs text-text-muted/70 text-center">
-              By signing in, you agree to KODA's Terms of Service and Privacy Policy
+              By signing in, you agree to KODA Terms of Service and Privacy Policy
             </p>
           </div>
         </div>
