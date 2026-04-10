@@ -1,0 +1,23 @@
+meta {
+  name: Submit Report
+  type: http
+}
+
+post {
+  url: http://localhost:3000/reports
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "intern_id": "36b18688-4213-47a3-a5f5-9908788a15f2",
+    "title": "Week 1 Report",
+    "content": "Completed onboarding and initial tasks",
+    "period_start": "2026-04-01T00:00:00",
+    "period_end": "2026-04-07T00:00:00"
+  }
+}
