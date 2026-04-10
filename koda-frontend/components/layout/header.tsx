@@ -7,11 +7,14 @@ import { roleToUserMap } from '@/lib/mock-data';
 
 export function Header() {
   const [currentUser, setCurrentUser] = useState(roleToUserMap.coordinator);
+  const [roleLabel, setRoleLabel] = useState('COORDINATOR');
 
   useEffect(() => {
     const selectedRole = localStorage.getItem('selectedRole') || 'coordinator';
     const user = roleToUserMap[selectedRole as keyof typeof roleToUserMap] || roleToUserMap.coordinator;
     setCurrentUser(user);
+    const normalizedRole = user.role === 'team-lead' ? 'team lead' : user.role;
+    setRoleLabel(normalizedRole.toUpperCase());
   }, []);
 
   return (
@@ -26,7 +29,7 @@ export function Header() {
               variant="outline"
               className="text-xs bg-transparent border-accent-primary/30 text-accent-primary mt-0.5"
             >
-              {currentUser.role}
+              {roleLabel}
             </Badge>
           </div>
           <Avatar className="h-9 w-9 bg-bg-elevated border border-border-color">

@@ -49,13 +49,27 @@ export function Sidebar() {
 
   const dashboardHref = roleRedirects[currentRole as UserRole] || '/login';
   const isDashboardRoute = pathname === dashboardHref || pathname.startsWith(dashboardHref + '/');
+  const isTeamLead = currentRole === 'team-lead';
 
-  const navigation = [
-    { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
-    { name: 'Intern Management', href: '/coordinator/intern-management', icon: Users },
-    { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
-    { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
-  ];
+  const managementItem = {
+    name: isTeamLead ? 'Team Management' : 'Intern Management',
+    href: isTeamLead ? '/teamlead/intern-management' : '/coordinator/intern-management',
+    icon: Users,
+  };
+
+  const navigation = isTeamLead
+    ? [
+        { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
+        managementItem,
+        { name: 'Live Attendance', href: '/teamlead/attendance', icon: ClipboardList },
+        { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
+      ]
+    : [
+        { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
+        managementItem,
+        { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
+        { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
+      ];
 
   return (
     <div className="fixed left-0 top-0 h-screen w-60 bg-bg-surface border-r border-border-color flex flex-col">
@@ -106,33 +120,37 @@ export function Sidebar() {
           );
         })}
 
-        <div className="my-4 border-t border-border-color" />
+        {currentRole === 'admin' && (
+          <>
+            <div className="my-4 border-t border-border-color" />
 
-        {adminNavigation.map((item) => {
-          const Icon = item.icon;
-          const isActive = item.match === 'prefix'
-            ? pathname === item.href || pathname.startsWith(item.href + '/')
-            : pathname === item.href;
+            {adminNavigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.match === 'prefix'
+                ? pathname === item.href || pathname.startsWith(item.href + '/')
+                : pathname === item.href;
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors group relative',
-                isActive
-                  ? 'text-accent-secondary bg-bg-elevated'
-                  : 'text-text-muted hover:text-accent-secondary hover:bg-bg-elevated/50'
-              )}
-            >
-              {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent-secondary rounded-r" />
-              )}
-              <Icon className="mr-3 h-5 w-5" />
-              {item.name}
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors group relative',
+                    isActive
+                      ? 'text-accent-secondary bg-bg-elevated'
+                      : 'text-text-muted hover:text-accent-secondary hover:bg-bg-elevated/50'
+                  )}
+                >
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent-secondary rounded-r" />
+                  )}
+                  <Icon className="mr-3 h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </>
+        )}
 
       </nav>
 

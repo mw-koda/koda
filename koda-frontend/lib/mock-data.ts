@@ -10,6 +10,7 @@ export interface Intern {
   reportStatus: 'pending' | 'submitted' | 'reviewed';
   issuesThisWeek: number;
   role: string;
+  team: 'Database Team' | 'GHL Team' | 'Scraping Team' | 'Agentic Rag';
   organizationId?: string;
 }
 
@@ -48,6 +49,42 @@ export interface Report {
   content: string;
   coordinatorNote: string | null;
   type: 'weekly' | 'daily';
+}
+
+export interface AttendanceLog {
+  id: string;
+  internId: string;
+  date: string;
+  clockIn: string;
+  clockOut: string;
+  minutesWorked: number;
+  location: string;
+}
+
+export interface AttendanceCheck {
+  id: string;
+  internId: string;
+  date: string;
+  clockIn: string;
+  clockOut: string;
+  minutesWorked: number;
+}
+
+export interface EodReport {
+  id: string;
+  internId: string;
+  date: string;
+  taskCompleted: string;
+  timeSpentMinutes: number;
+  keySuccess: string;
+  mainChallenges: string;
+  plansTomorrow: string;
+  ratings: {
+    diet: number;
+    exercise: number;
+    relationship: number;
+    overall: number;
+  };
 }
 
 export interface BatchSummary {
@@ -94,6 +131,7 @@ export const interns: Intern[] = [
     reportStatus: 'submitted',
     issuesThisWeek: 4,
     role: 'Frontend Intern',
+    team: 'GHL Team',
     organizationId: 'org-1',
   },
   {
@@ -108,6 +146,7 @@ export const interns: Intern[] = [
     reportStatus: 'pending',
     issuesThisWeek: 3,
     role: 'Backend Intern',
+    team: 'Database Team',
     organizationId: 'org-1',
   },
   {
@@ -122,6 +161,7 @@ export const interns: Intern[] = [
     reportStatus: 'reviewed',
     issuesThisWeek: 5,
     role: 'Full-Stack Intern',
+    team: 'Agentic Rag',
     organizationId: 'org-1',
   },
   {
@@ -136,6 +176,7 @@ export const interns: Intern[] = [
     reportStatus: 'submitted',
     issuesThisWeek: 2,
     role: 'DevOps Intern',
+    team: 'Scraping Team',
     organizationId: 'org-1',
   },
   {
@@ -150,6 +191,7 @@ export const interns: Intern[] = [
     reportStatus: 'submitted',
     issuesThisWeek: 4,
     role: 'Frontend Intern',
+    team: 'GHL Team',
     organizationId: 'org-1',
   },
   {
@@ -164,6 +206,7 @@ export const interns: Intern[] = [
     reportStatus: 'pending',
     issuesThisWeek: 1,
     role: 'Backend Intern',
+    team: 'Database Team',
     organizationId: 'org-1',
   },
   {
@@ -178,6 +221,7 @@ export const interns: Intern[] = [
     reportStatus: 'reviewed',
     issuesThisWeek: 6,
     role: 'Full-Stack Intern',
+    team: 'Agentic Rag',
     organizationId: 'org-1',
   },
   {
@@ -192,6 +236,7 @@ export const interns: Intern[] = [
     reportStatus: 'submitted',
     issuesThisWeek: 3,
     role: 'Frontend Intern',
+    team: 'Scraping Team',
     organizationId: 'org-1',
   },
 ];
@@ -480,6 +525,191 @@ export const reports: Report[] = [
   },
 ];
 
+export const attendanceLogs: AttendanceLog[] = [
+  {
+    id: 'att-1',
+    internId: '1',
+    date: '2026-04-09',
+    clockIn: '2026-04-09T16:52:00Z',
+    clockOut: '2026-04-10T01:00:00Z',
+    minutesWorked: 488,
+    location: 'Labangon, Cebu City, Central Visayas, 6000, Philippines',
+  },
+  {
+    id: 'att-2',
+    internId: '1',
+    date: '2026-04-08',
+    clockIn: '2026-04-08T16:51:00Z',
+    clockOut: '2026-04-09T01:00:00Z',
+    minutesWorked: 489,
+    location: 'Labangon, Cebu City, Central Visayas, 6000, Philippines',
+  },
+  {
+    id: 'att-3',
+    internId: '1',
+    date: '2026-04-07',
+    clockIn: '2026-04-07T17:01:00Z',
+    clockOut: '2026-04-08T01:00:00Z',
+    minutesWorked: 479,
+    location: 'Labangon, Cebu City, Central Visayas, 6000, Philippines',
+  },
+  {
+    id: 'att-4',
+    internId: '1',
+    date: '2026-04-06',
+    clockIn: '2026-04-06T16:48:00Z',
+    clockOut: '2026-04-07T01:00:00Z',
+    minutesWorked: 492,
+    location: 'Labangon, Cebu City, Central Visayas, 6000, Philippines',
+  },
+  {
+    id: 'att-5',
+    internId: '2',
+    date: '2026-04-09',
+    clockIn: '2026-04-09T15:12:00Z',
+    clockOut: '2026-04-09T23:05:00Z',
+    minutesWorked: 473,
+    location: 'Makati, Metro Manila, Philippines',
+  },
+  {
+    id: 'att-6',
+    internId: '2',
+    date: '2026-04-08',
+    clockIn: '2026-04-08T15:18:00Z',
+    clockOut: '2026-04-08T23:10:00Z',
+    minutesWorked: 472,
+    location: 'Makati, Metro Manila, Philippines',
+  },
+  {
+    id: 'att-7',
+    internId: '3',
+    date: '2026-04-09',
+    clockIn: '2026-04-09T14:45:00Z',
+    clockOut: '2026-04-09T22:32:00Z',
+    minutesWorked: 467,
+    location: 'Quezon City, Metro Manila, Philippines',
+  },
+  {
+    id: 'att-8',
+    internId: '3',
+    date: '2026-04-08',
+    clockIn: '2026-04-08T14:53:00Z',
+    clockOut: '2026-04-08T22:40:00Z',
+    minutesWorked: 467,
+    location: 'Quezon City, Metro Manila, Philippines',
+  },
+];
+
+export const attendanceChecks: AttendanceCheck[] = [
+  {
+    id: 'check-1',
+    internId: '1',
+    date: '2026-04-10',
+    clockIn: '2026-04-10T16:52:00Z',
+    clockOut: '2026-04-11T01:00:00Z',
+    minutesWorked: 488,
+  },
+  {
+    id: 'check-2',
+    internId: '2',
+    date: '2026-04-10',
+    clockIn: '2026-04-10T17:05:00Z',
+    clockOut: '2026-04-11T01:02:00Z',
+    minutesWorked: 477,
+  },
+  {
+    id: 'check-3',
+    internId: '3',
+    date: '2026-04-10',
+    clockIn: '2026-04-10T16:45:00Z',
+    clockOut: '2026-04-11T00:50:00Z',
+    minutesWorked: 485,
+  },
+  {
+    id: 'check-4',
+    internId: '4',
+    date: '2026-04-10',
+    clockIn: '2026-04-10T17:10:00Z',
+    clockOut: '2026-04-11T00:58:00Z',
+    minutesWorked: 468,
+  },
+  {
+    id: 'check-5',
+    internId: '5',
+    date: '2026-04-10',
+    clockIn: '2026-04-10T16:58:00Z',
+    clockOut: '2026-04-11T01:05:00Z',
+    minutesWorked: 487,
+  },
+];
+
+export const eodReports: EodReport[] = [
+  {
+    id: 'eod-1',
+    internId: '1',
+    date: '2026-04-09',
+    taskCompleted: 'Hardened OAuth callback error handling and updated logs.',
+    timeSpentMinutes: 480,
+    keySuccess: 'Resolved state mismatch edge cases and added structured logging.',
+    mainChallenges: 'Pending client ID rotation for final verification.',
+    plansTomorrow: 'Finish GitHub OAuth integration and validate staging redirects.',
+    ratings: {
+      diet: 7,
+      exercise: 6,
+      relationship: 8,
+      overall: 8,
+    },
+  },
+  {
+    id: 'eod-2',
+    internId: '1',
+    date: '2026-04-08',
+    taskCompleted: 'Reviewed OAuth spec and documented callback handling notes.',
+    timeSpentMinutes: 465,
+    keySuccess: 'Mapped error states and documented token exchange flow.',
+    mainChallenges: 'No major blockers today.',
+    plansTomorrow: 'Implement callback handler guards and add invalid state tests.',
+    ratings: {
+      diet: 6,
+      exercise: 5,
+      relationship: 7,
+      overall: 7,
+    },
+  },
+  {
+    id: 'eod-3',
+    internId: '2',
+    date: '2026-04-09',
+    taskCompleted: 'Investigated memory usage spikes in batch pipeline.',
+    timeSpentMinutes: 450,
+    keySuccess: 'Reproduced leak and identified buffering as root cause.',
+    mainChallenges: 'Need guidance on acceptable memory ceiling.',
+    plansTomorrow: 'Prototype streaming fix and benchmark with large dataset.',
+    ratings: {
+      diet: 7,
+      exercise: 7,
+      relationship: 6,
+      overall: 7,
+    },
+  },
+  {
+    id: 'eod-4',
+    internId: '3',
+    date: '2026-04-09',
+    taskCompleted: 'Finalized dark mode color tokens and updated dashboards.',
+    timeSpentMinutes: 470,
+    keySuccess: 'Synced tokens with design system and refreshed layout styles.',
+    mainChallenges: 'No blockers today.',
+    plansTomorrow: 'Audit chart contrast and prepare handoff notes.',
+    ratings: {
+      diet: 8,
+      exercise: 6,
+      relationship: 8,
+      overall: 8,
+    },
+  },
+];
+
 export const batches: BatchSummary[] = [
   {
     id: 'batch-1',
@@ -718,7 +948,7 @@ export const currentUser = roleToUserMap.coordinator;
 
 // Dev toggle: change role to 'admin' | 'coordinator' | 'team-lead' | 'intern' to access that dashboard after login.
 export const mockAuthConfig: { role: UserRole; organizationId?: string } = {
-  role: 'coordinator',
+  role: 'team-lead',
   // Set to 'org-1' to skip the join-organization prompt for interns.
   organizationId: undefined,
 };
@@ -742,3 +972,9 @@ export const performanceData = [
 export const getInternById = (id: string) => interns.find(i => i.id === id);
 export const getIssuesByInternId = (internId: string) => issues.filter(i => i.internId === internId);
 export const getReportsByInternId = (internId: string) => reports.filter(r => r.internId === internId);
+export const getAttendanceByInternId = (internId: string) => attendanceLogs.filter(a => a.internId === internId);
+export const getEodByInternId = (internId: string) => eodReports.filter(r => r.internId === internId);
+export const getAttendanceChecksByDate = (date: string) =>
+  attendanceChecks.filter((check) => check.date === date);
+export const getAttendanceLogsByDate = (date: string) =>
+  attendanceLogs.filter((log) => log.date === date);
