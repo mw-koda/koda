@@ -6,7 +6,7 @@ import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { batchCatalog, type Batch } from '@/lib/mock-data';
+import { batchCatalog, type BatchCatalogEntry } from '@/lib/mock-data';
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -21,7 +21,7 @@ function getDaysRemaining(endDate: string) {
   return Math.max(Math.ceil(differenceInMs / (1000 * 60 * 60 * 24)), 0);
 }
 
-function getEnrollmentProgress(batch: Batch) {
+function getEnrollmentProgress(batch: BatchCatalogEntry) {
   return Math.min(Math.round((batch.enrolledCount / batch.maxInterns) * 100), 100);
 }
 

@@ -50,7 +50,7 @@ export interface Report {
   type: 'weekly' | 'daily';
 }
 
-export interface Batch {
+export interface BatchSummary {
   id: string;
   name: string;
   status: 'active' | 'completed';
@@ -69,7 +69,7 @@ export interface User {
   organizationId?: string;
 }
 
-export interface Batch {
+export interface BatchCatalogEntry {
   id: string;
   name: string;
   startDate: string;
@@ -480,7 +480,7 @@ export const reports: Report[] = [
   },
 ];
 
-export const batches: Batch[] = [
+export const batches: BatchSummary[] = [
   {
     id: 'batch-1',
     name: 'KODA Spring Cohort',
@@ -525,7 +525,7 @@ export const batches: Batch[] = [
   },
 ];
 
-export const batchCatalog: Batch[] = [
+export const batchCatalog: BatchCatalogEntry[] = [
   {
     id: 'batch-2024-q1',
     name: 'Metawatt Q1 2024 Cohort',
