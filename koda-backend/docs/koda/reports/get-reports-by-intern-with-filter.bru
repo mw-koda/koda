@@ -1,0 +1,8 @@
+meta {
+  name: Get Reports by Intern
+  type: http
+}
+
+get {
+  url: http://localhost:3000/reports/intern/{{internID}}?periodStart={{periodStart}}&periodEnd={{periodEnd}}
+}

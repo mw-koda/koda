@@ -1,0 +1,15 @@
+meta {
+  name: Update Intern Team
+  type: http
+}
+
+patch {
+  url: http://localhost:3000/interns/{{internId}}
+  body: json
+}
+
+body:json {
+  {
+    "team_id": "{{teamId}}"
+  }
+}

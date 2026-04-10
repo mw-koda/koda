@@ -9,6 +9,8 @@ import { PerformanceModule } from './performance/performance.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { IssuesModule } from './issues/issues.module';
 import { TeamsModule } from './teams/teams.module';
+import { InternsModule } from './interns/interns.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { TeamsModule } from './teams/teams.module';
     BatchesModule,
     PerformanceModule,
     TeamsModule,
+    InternsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService, DefaultAdminSeeder],
