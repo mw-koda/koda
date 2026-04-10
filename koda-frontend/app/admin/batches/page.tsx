@@ -1,42 +1,28 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
-
-import { BatchCard } from './batch-card';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ArrowRight, Layers, CalendarRange, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { batches } from '@/lib/mock-data';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { batchCatalog } from '@/lib/mock-data';
+
+function formatDateRange(startDate: string, endDate: string) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  return `${formatter.format(new Date(startDate))} - ${formatter.format(new Date(endDate))}`;
+}
 
 export default function AdminBatchesPage() {
   const [isMounted, setIsMounted] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const filteredBatches = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-
-    if (!normalizedSearch) {
-      return batches;
-    }
-
-    return batches.filter((batch) =>
-      batch.name.toLowerCase().includes(normalizedSearch)
-    );
-  }, [searchTerm]);
 
   if (!isMounted) {
     return <div className="p-8 text-text-muted">Loading batches...</div>;
@@ -44,81 +30,81 @@ export default function AdminBatchesPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-label text-accent-secondary mb-3">
-            Admin / Batch Management
-          </p>
-          <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
-            Batch Management
-          </h1>
-          <p className="max-w-2xl text-text-muted">
-            Review active and completed batches, search by name, and start new cohorts from the admin workspace.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
-          <div className="relative w-full sm:w-80">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-            <Input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search batches..."
-              className="pl-10 bg-bg-elevated border-border-color text-text-primary placeholder:text-text-muted focus-visible:ring-accent-primary"
-            />
+      <Card className="card-glow border-border-color bg-bg-surface">
+        <CardHeader className="space-y-4 border-b border-border-color/70 bg-bg-elevated/40">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="font-display text-3xl text-text-primary">
+                Batch Management
+              </CardTitle>
+              <CardDescription className="mt-2 text-text-muted max-w-2xl">
+                Select a batch to inspect its operating window, capacity, and enrollment state.
+              </CardDescription>
+            </div>
+            <div className="hidden rounded-full border border-accent-primary/20 bg-accent-primary/10 px-4 py-2 text-sm text-accent-primary md:flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              Command Center
+            </div>
           </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          {batchCatalog.length === 0 ? (
+            <div className="rounded-xl border border-border-color bg-bg-elevated p-6 text-text-muted">
+              No batches have been registered yet.
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {batchCatalog.map((batch) => (
+                <Link key={batch.id} href={`/admin/batches/${batch.id}`} className="group">
+                  <div className="h-full rounded-xl border border-border-color bg-bg-elevated p-5 transition-colors group-hover:border-accent-primary/50 group-hover:bg-bg-surface">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-semibold text-text-primary">
+                          {batch.name}
+                        </p>
+                        <p className="mt-2 text-sm text-text-muted">
+                          {batch.description}
+                        </p>
+                      </div>
+                      <ArrowRight className="mt-1 h-5 w-5 text-accent-primary transition-transform group-hover:translate-x-0.5" />
+                    </div>
 
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-accent-primary text-bg-base font-semibold hover:bg-accent-secondary shadow-lg shadow-accent-primary/10">
-                Create New Batch
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-bg-surface border-border-color text-text-primary sm:max-w-lg card-glow">
-              <DialogHeader>
-                <DialogTitle className="font-mono text-2xl">
-                  Create New Batch
-                </DialogTitle>
-                <DialogDescription className="text-text-muted">
-                  Placeholder modal for the next step of the batch creation flow.
-                </DialogDescription>
-              </DialogHeader>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg border border-border-color/60 bg-bg-surface p-3">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-text-muted">
+                          <CalendarRange className="h-4 w-4 text-accent-primary" />
+                          Timeline
+                        </div>
+                        <p className="mt-2 text-sm text-text-primary">{formatDateRange(batch.startDate, batch.endDate)}</p>
+                      </div>
+                      <div className="rounded-lg border border-border-color/60 bg-bg-surface p-3">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-text-muted">
+                          <Users className="h-4 w-4 text-accent-primary" />
+                          Capacity
+                        </div>
+                        <p className="mt-2 text-sm text-text-primary">{batch.maxInterns} interns</p>
+                      </div>
+                      <div className="rounded-lg border border-border-color/60 bg-bg-surface p-3">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-text-muted">
+                          <Layers className="h-4 w-4 text-accent-primary" />
+                          Enrolled
+                        </div>
+                        <p className="mt-2 text-sm text-text-primary">{batch.enrolledCount} interns</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
 
-              <div className="space-y-3 text-sm text-text-muted">
-                <p>Batch setup form will live here in the next task.</p>
-                <p>For now, this modal confirms the toolbar trigger is wired correctly.</p>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <p className="text-sm text-text-muted">
-          Showing {filteredBatches.length} of {batches.length} batches
-        </p>
-        <p className="text-xs uppercase tracking-widest text-text-muted">
-          1 column mobile · 2 tablet · 3 desktop
-        </p>
-      </div>
-
-      {filteredBatches.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredBatches.map((batch) => (
-            <BatchCard key={batch.id} batch={batch} />
-          ))}
-        </div>
-      ) : (
-        <Card className="bg-bg-surface border-border-color p-8 text-center card-glow">
-          <h2 className="text-xl font-mono font-semibold text-text-primary mb-2">
-            No batches found
-          </h2>
-          <p className="text-sm text-text-muted">
-            Try a different search term or clear the filter to see all batches.
-          </p>
-        </Card>
-      )}
+          <div className="mt-6 flex justify-end">
+            <Button asChild variant="ghost" className="text-text-primary hover:bg-bg-elevated hover:text-text-primary">
+              <Link href="/admin/dashboard">Return to dashboard</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
