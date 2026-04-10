@@ -8,6 +8,7 @@ import {
   ClipboardList,
   GitPullRequest,
   ShieldCheck,
+  Layers3,
   LogOut,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +18,16 @@ import { useState, useEffect } from 'react';
 
 const adminNavigation = [
   { name: 'User Management', href: '/admin', icon: ShieldCheck },
+  { name: 'Batch Management', href: '/admin/batches', icon: Layers3 },
 ];
+
+function isAdminNavItemActive(pathname: string, href: string) {
+  if (href === '/admin') {
+    return pathname === href;
+  }
+
+  return pathname === href || pathname.startsWith(href + '/');
+}
 
 
 export function Sidebar() {
@@ -92,7 +102,7 @@ export function Sidebar() {
 
         {adminNavigation.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = isAdminNavItemActive(pathname, item.href);
 
           return (
             <Link
