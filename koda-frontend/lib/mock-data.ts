@@ -69,6 +69,15 @@ export interface User {
   organizationId?: string;
 }
 
+export interface Batch {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  maxInterns: number;
+  description?: string;
+}
+
 export type UserRole = User['role'];
 
 export const interns: Intern[] = [
@@ -685,7 +694,7 @@ export const currentUser = roleToUserMap.coordinator;
 
 // Dev toggle: change role to 'admin' | 'coordinator' | 'team-lead' | 'intern' to access that dashboard after login.
 export const mockAuthConfig: { role: UserRole; organizationId?: string } = {
-  role: 'coordinator',
+  role: 'admin',
   // Set to 'org-1' to skip the join-organization prompt for interns.
   organizationId: undefined,
 };
