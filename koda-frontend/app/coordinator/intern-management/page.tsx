@@ -164,7 +164,7 @@ export default function InternManagementPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Link
-                        href={`/coordinator/interns/${intern.id}`}
+                        href={`/coordinator/intern/${intern.id}`}
                         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent-primary border border-accent-primary/30 rounded-lg hover:bg-accent-primary/10 transition-colors"
                       >
                         <svg

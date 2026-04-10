@@ -32,6 +32,11 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('No authenticated user');
     }
 
+    // ADMIN has full access to all role-protected endpoints.
+    if (user.role === Role.ADMIN) {
+      return true;
+    }
+
     if (!requiredRoles.includes(user.role)) {
       throw new ForbiddenException(
         `Access denied. Required roles: ${requiredRoles.join(', ')}`,

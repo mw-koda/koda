@@ -50,6 +50,14 @@ export interface Report {
   type: 'weekly' | 'daily';
 }
 
+export interface Batch {
+  id: string;
+  name: string;
+  status: 'active' | 'completed';
+  dateRange: string;
+  internCount: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -472,7 +480,50 @@ export const reports: Report[] = [
   },
 ];
 
-export const batches: Batch[] = [];
+export const batches: Batch[] = [
+  {
+    id: 'batch-1',
+    name: 'KODA Spring Cohort',
+    status: 'active',
+    dateRange: 'Mar 2026 - May 2026',
+    internCount: 12,
+  },
+  {
+    id: 'batch-2',
+    name: 'Platform Foundations',
+    status: 'completed',
+    dateRange: 'Jan 2026 - Mar 2026',
+    internCount: 10,
+  },
+  {
+    id: 'batch-3',
+    name: 'Frontend Launchpad',
+    status: 'active',
+    dateRange: 'Apr 2026 - Jun 2026',
+    internCount: 8,
+  },
+  {
+    id: 'batch-4',
+    name: 'Backend Systems Track',
+    status: 'completed',
+    dateRange: 'Nov 2025 - Feb 2026',
+    internCount: 9,
+  },
+  {
+    id: 'batch-5',
+    name: 'Quality Assurance Sprint',
+    status: 'active',
+    dateRange: 'Mar 2026 - Jun 2026',
+    internCount: 6,
+  },
+  {
+    id: 'batch-6',
+    name: 'Leadership Rotation',
+    status: 'completed',
+    dateRange: 'Aug 2025 - Dec 2025',
+    internCount: 7,
+  },
+];
 
 export const batchCatalog: Batch[] = [
   {

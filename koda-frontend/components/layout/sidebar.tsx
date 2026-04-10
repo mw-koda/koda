@@ -21,6 +21,14 @@ const adminNavigation = [
   { name: 'Batch Management', href: '/admin/batches', icon: Layers, match: 'prefix' },
 ];
 
+function isAdminNavItemActive(pathname: string, href: string) {
+  if (href === '/admin') {
+    return pathname === href;
+  }
+
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
 
 export function Sidebar() {
   const pathname = usePathname();

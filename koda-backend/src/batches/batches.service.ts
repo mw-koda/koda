@@ -88,12 +88,9 @@ export class BatchesService {
 
   async findAll(search?: string): Promise<BatchSummary[]> {
     const supabase = this.supabaseService.getClient();
-    let query = supabase
-      .from('batches')
-      .select('*')
-      .order('created_at', {
-        ascending: false,
-      });
+    let query = supabase.from('batches').select('*').order('created_at', {
+      ascending: false,
+    });
 
     const normalizedSearch = search?.trim();
     if (normalizedSearch) {
