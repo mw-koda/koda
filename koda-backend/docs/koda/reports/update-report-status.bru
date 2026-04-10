@@ -1,0 +1,19 @@
+meta {
+  name: Update Report Status
+  type: http
+}
+
+patch {
+  url: http://localhost:3000/reports/reportID/status
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "reviewed"
+  }
+}
