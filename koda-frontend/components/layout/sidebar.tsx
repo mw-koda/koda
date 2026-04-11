@@ -7,6 +7,7 @@ import {
   Users,
   ClipboardList,
   GitPullRequest,
+  ChevronLeft,
   ShieldCheck,
   Layers,
   LogOut,
@@ -50,6 +51,11 @@ export function Sidebar() {
   const dashboardHref = roleRedirects[currentRole as UserRole] || '/login';
   const isDashboardRoute = pathname === dashboardHref || pathname.startsWith(dashboardHref + '/');
   const isTeamLead = currentRole === 'team-lead';
+  const isAdmin = currentRole === 'admin';
+  const adminTeamMatch = pathname.match(/^\/admin\/teams\/([^/]+)/);
+  const adminTeamSlug = adminTeamMatch?.[1];
+  const isAdminTeamView = isAdmin && Boolean(adminTeamSlug);
+  const adminTeamBase = adminTeamSlug ? `/admin/teams/${adminTeamSlug}` : '';
 
   const managementItem = {
     name: isTeamLead ? 'Team Management' : 'Intern Management',
@@ -57,19 +63,41 @@ export function Sidebar() {
     icon: Users,
   };
 
-  const navigation = isTeamLead
+  const navigation = isAdmin
+    ? []
+    : isTeamLead
+      ? [
+          { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
+          managementItem,
+          { name: 'Live Attendance', href: '/teamlead/attendance', icon: ClipboardList },
+          { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
+        ]
+      : [
+          { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
+          managementItem,
+          { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
+          { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
+        ];
+
+  const adminNavigationItems = isAdmin
     ? [
-        { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
-        managementItem,
-        { name: 'Live Attendance', href: '/teamlead/attendance', icon: ClipboardList },
-        { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
+        {
+          name: 'Dashboard',
+          href: dashboardHref,
+          icon: LayoutDashboard,
+          match: 'prefix',
+        },
+        ...adminNavigation,
       ]
-    : [
-        { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
-        managementItem,
-        { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
-        { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
-      ];
+    : adminNavigation;
+
+  const adminTeamNavigation = isAdminTeamView
+    ? [
+        { name: 'Dashboard', href: `${adminTeamBase}/dashboard`, icon: LayoutDashboard, match: 'prefix' },
+        { name: 'Team Management', href: `${adminTeamBase}/team-management`, icon: Users, match: 'prefix' },
+        { name: 'Issue Tracking', href: `${adminTeamBase}/issue-tracking`, icon: GitPullRequest, match: 'prefix' },
+      ]
+    : [];
 
   return (
     <div className="fixed left-0 top-0 h-screen w-60 bg-bg-surface border-r border-border-color flex flex-col">
@@ -120,11 +148,47 @@ export function Sidebar() {
           );
         })}
 
-        {currentRole === 'admin' && (
+        {isAdminTeamView && (
+          <>
+            <Link
+              href="/admin/dashboard"
+              className="flex items-center px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.22em] text-text-muted hover:text-text-primary rounded-md hover:bg-bg-elevated/50 transition-colors"
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back to admin
+            </Link>
+
+            {adminTeamNavigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors group relative',
+                    isActive
+                      ? 'text-accent-primary bg-bg-elevated'
+                      : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated/50'
+                  )}
+                >
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent-primary rounded-r" />
+                  )}
+                  <Icon className="mr-3 h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </>
+        )}
+
+        {currentRole === 'admin' && !isAdminTeamView && (
           <>
             <div className="my-4 border-t border-border-color" />
 
-            {adminNavigation.map((item) => {
+            {adminNavigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.match === 'prefix'
                 ? pathname === item.href || pathname.startsWith(item.href + '/')

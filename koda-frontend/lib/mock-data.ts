@@ -758,9 +758,9 @@ export const batches: BatchSummary[] = [
 export const batchCatalog: BatchCatalogEntry[] = [
   {
     id: 'batch-2024-q1',
-    name: 'Metawatt Q1 2024 Cohort',
-    startDate: '2024-01-15',
-    endDate: '2024-03-29',
+    name: 'Metawatt January 2026 Internship',
+    startDate: '2026-01-19',
+    endDate: '2026-05-14',
     maxInterns: 8,
     enrolledCount: 8,
     description:
@@ -948,7 +948,7 @@ export const currentUser = roleToUserMap.coordinator;
 
 // Dev toggle: change role to 'admin' | 'coordinator' | 'team-lead' | 'intern' to access that dashboard after login.
 export const mockAuthConfig: { role: UserRole; organizationId?: string } = {
-  role: 'team-lead',
+  role: 'admin',
   // Set to 'org-1' to skip the join-organization prompt for interns.
   organizationId: undefined,
 };

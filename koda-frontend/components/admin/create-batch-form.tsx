@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 const createBatchSchema = z
   .object({
     batchName: z.string().min(1, 'Batch name is required.'),
+    inviteCode: z.string().min(1, 'Invite code is required.'),
     startDate: z.date({ required_error: 'Start date is required.' }),
     endDate: z.date({ required_error: 'End date is required.' }),
     maxInterns: z.coerce
@@ -42,6 +43,13 @@ export type CreateBatchFormValues = z.infer<typeof createBatchSchema>;
 
 function formatDateLabel(date?: Date) {
   return date ? format(date, 'PPP') : 'Pick a date';
+}
+
+function generateInviteCode() {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const prefix = Array.from({ length: 3 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+  const suffix = Math.floor(10000 + Math.random() * 90000);
+  return `${prefix}-${suffix}`;
 }
 
 function DatePickerField({
@@ -96,6 +104,7 @@ function DatePickerField({
 
 export function CreateBatchForm() {
   const [isMounted, setIsMounted] = React.useState(false);
+  const [inviteCode, setInviteCode] = React.useState(() => generateInviteCode());
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -105,6 +114,7 @@ export function CreateBatchForm() {
     resolver: zodResolver(createBatchSchema),
     defaultValues: {
       batchName: '',
+      inviteCode,
       startDate: undefined,
       endDate: undefined,
       maxInterns: undefined,
@@ -112,15 +122,36 @@ export function CreateBatchForm() {
     },
   });
 
+  React.useEffect(() => {
+    form.setValue('inviteCode', inviteCode, { shouldValidate: true });
+  }, [form, inviteCode]);
+
   function onSubmit(values: CreateBatchFormValues) {
     console.log('Create batch form submitted', values);
 
     toast({
       title: 'Batch submitted',
-      description: `${values.batchName} is ready for the next workflow step.`,
+      description: `${values.batchName} is ready. Invite code: ${values.inviteCode}.`,
     });
 
     form.reset();
+    setInviteCode(generateInviteCode());
+  }
+
+  async function handleCopyInviteCode() {
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      toast({
+        title: 'Invite code copied',
+        description: 'Share the code with interns to join the batch.',
+      });
+    } catch (error) {
+      console.error('Failed to copy invite code', error);
+      toast({
+        title: 'Copy failed',
+        description: 'Please copy the code manually.',
+      });
+    }
   }
 
   if (!isMounted) {
@@ -144,6 +175,46 @@ export function CreateBatchForm() {
                   className="bg-bg-surface border-border-color text-text-primary placeholder:text-text-muted"
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="inviteCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Join Code</FormLabel>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <FormControl>
+                  <Input
+                    {...field}
+                    readOnly
+                    value={field.value ?? ''}
+                    className="bg-bg-surface border-border-color text-text-primary tracking-[0.2em]"
+                  />
+                </FormControl>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-border-color text-text-primary hover:bg-bg-elevated"
+                  onClick={handleCopyInviteCode}
+                >
+                  Copy
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-border-color text-text-primary hover:bg-bg-elevated"
+                  onClick={() => setInviteCode(generateInviteCode())}
+                >
+                  Regenerate
+                </Button>
+              </div>
+              <p className="text-xs text-text-muted">
+                Share this code with interns so they can join this batch team.
+              </p>
               <FormMessage />
             </FormItem>
           )}
