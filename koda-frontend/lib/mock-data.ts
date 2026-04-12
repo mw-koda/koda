@@ -99,7 +99,7 @@ export interface User {
   id: string;
   name: string;
   github: string;
-  role: 'intern' | 'coordinator' | 'team-lead' | 'admin';
+  role: 'intern' | 'coordinator' | 'admin';
   status: 'active' | 'pending' | 'inactive';
   joinedAt: string;
   avatarInitials: string;
@@ -861,15 +861,6 @@ export const users: User[] = [
     avatarInitials: 'CM',
   },
   {
-    id: 'user-10',
-    name: 'Rachel Green',
-    github: 'rachelg',
-    role: 'team-lead',
-    status: 'active',
-    joinedAt: '2023-06-15',
-    avatarInitials: 'RG',
-  },
-  {
     id: 'user-11',
     name: 'Michael Torres',
     github: 'michaelt',
@@ -923,15 +914,6 @@ export const roleToUserMap: Record<string, User> = {
     avatarInitials: 'CM',
     organizationId: 'org-1',
   },
-  'team-lead': {
-    id: 'user-10',
-    name: 'Rachel Green',
-    github: 'rachelg',
-    role: 'team-lead',
-    status: 'active',
-    joinedAt: '2023-06-15',
-    avatarInitials: 'RG',
-  },
   intern: {
     id: 'user-1',
     name: 'Sarah Chen',
@@ -946,9 +928,9 @@ export const roleToUserMap: Record<string, User> = {
 // Deprecated: Use roleToUserMap instead
 export const currentUser = roleToUserMap.coordinator;
 
-// Dev toggle: change role to 'admin' | 'coordinator' | 'team-lead' | 'intern' to access that dashboard after login.
+// Dev toggle: change role to 'admin' | 'coordinator' | 'intern' to access that dashboard after login.
 export const mockAuthConfig: { role: UserRole; organizationId?: string } = {
-  role: 'intern',
+  role: 'coordinator',
   // Set to 'org-1' to skip the join-organization prompt for interns.
   organizationId: undefined,
 };
@@ -956,7 +938,6 @@ export const mockAuthConfig: { role: UserRole; organizationId?: string } = {
 export const roleRedirects: Record<UserRole, string> = {
   intern: '/interns/dashboard',
   coordinator: '/coordinator/dashboard',
-  'team-lead': '/teamlead/dashboard',
   admin: '/admin/dashboard',
 };
 

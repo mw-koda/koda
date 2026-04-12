@@ -51,7 +51,6 @@ export function Sidebar() {
 
   const dashboardHref = roleRedirects[currentRole as UserRole] || '/login';
   const isDashboardRoute = pathname === dashboardHref || pathname.startsWith(dashboardHref + '/');
-  const isTeamLead = currentRole === 'team-lead';
   const isIntern = currentRole === 'intern';
   const isAdmin = currentRole === 'admin';
   const adminTeamMatch = pathname.match(/^\/admin\/teams\/([^/]+)/);
@@ -60,21 +59,14 @@ export function Sidebar() {
   const adminTeamBase = adminTeamSlug ? `/admin/teams/${adminTeamSlug}` : '';
 
   const managementItem = {
-    name: isTeamLead ? 'Team Management' : 'Intern Management',
-    href: isTeamLead ? '/teamlead/intern-management' : '/coordinator/intern-management',
+    name: 'Intern Management',
+    href: '/coordinator/intern-management',
     icon: Users,
   };
 
   const navigation = isAdmin
     ? []
-    : isTeamLead
-      ? [
-          { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
-          managementItem,
-          { name: 'Live Attendance', href: '/teamlead/attendance', icon: ClipboardList },
-          { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
-        ]
-      : isIntern
+    : isIntern
         ? [
             { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
             { name: 'Profile', href: '/interns/profile', icon: UserCircle },
