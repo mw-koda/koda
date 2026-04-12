@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ShieldCheck,
   Layers,
+  UserCircle,
   LogOut,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +52,7 @@ export function Sidebar() {
   const dashboardHref = roleRedirects[currentRole as UserRole] || '/login';
   const isDashboardRoute = pathname === dashboardHref || pathname.startsWith(dashboardHref + '/');
   const isTeamLead = currentRole === 'team-lead';
+  const isIntern = currentRole === 'intern';
   const isAdmin = currentRole === 'admin';
   const adminTeamMatch = pathname.match(/^\/admin\/teams\/([^/]+)/);
   const adminTeamSlug = adminTeamMatch?.[1];
@@ -72,12 +74,17 @@ export function Sidebar() {
           { name: 'Live Attendance', href: '/teamlead/attendance', icon: ClipboardList },
           { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
         ]
-      : [
-          { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
-          managementItem,
-          { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
-          { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
-        ];
+      : isIntern
+        ? [
+            { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
+            { name: 'Profile', href: '/interns/profile', icon: UserCircle },
+          ]
+        : [
+            { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
+            managementItem,
+            { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
+            { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
+          ];
 
   const adminNavigationItems = isAdmin
     ? [

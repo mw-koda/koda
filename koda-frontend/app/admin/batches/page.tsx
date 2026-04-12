@@ -5,15 +5,6 @@ import Link from 'next/link';
 import { ArrowRight, CalendarRange, Layers, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { CreateBatchForm } from '@/components/admin/create-batch-form';
 import { batchCatalog } from '@/lib/mock-data';
 
 function formatDateRange(startDate: string, endDate: string) {
@@ -50,22 +41,6 @@ export default function AdminBatchesPage() {
                 Select a batch to inspect its operating window, capacity, and enrollment state.
               </CardDescription>
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-accent-primary text-bg-base hover:bg-accent-primary/90">
-                  Create batch
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl border-border-color bg-bg-surface">
-                <DialogHeader>
-                  <DialogTitle className="text-text-primary">Create a new batch</DialogTitle>
-                  <DialogDescription className="text-text-muted">
-                    Set up the next cohort for incoming interns.
-                  </DialogDescription>
-                </DialogHeader>
-                <CreateBatchForm />
-              </DialogContent>
-            </Dialog>
           </div>
         </CardHeader>
         <CardContent className="p-6">

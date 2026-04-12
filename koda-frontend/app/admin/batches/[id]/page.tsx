@@ -5,18 +5,7 @@ import Link from 'next/link';
 import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/hooks/use-toast';
 import { batchCatalog, getAttendanceLogsByDate, interns, type BatchCatalogEntry } from '@/lib/mock-data';
 import { slugifyTeamName } from '@/lib/team-utils';
 
@@ -74,9 +63,6 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
   const [selectedDate, setSelectedDate] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
-  const [teamName, setTeamName] = useState('');
-  const [teamCapacity, setTeamCapacity] = useState('');
-  const [teamNotes, setTeamNotes] = useState('');
   const attendanceLogs = useMemo(
     () => getAttendanceLogsByDate(selectedDate),
     [selectedDate]
@@ -112,38 +98,6 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
     internCount: team.internCount,
     progress: getTeamProgress(team.scores),
   }));
-
-  function handleCreateTeam(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const trimmedName = teamName.trim();
-    const capacityValue = teamCapacity ? Number(teamCapacity) : undefined;
-
-    if (!trimmedName) {
-      toast({
-        title: 'Team name required',
-        description: 'Add a team name before creating the team.',
-      });
-      return;
-    }
-
-    if (capacityValue !== undefined && Number.isNaN(capacityValue)) {
-      toast({
-        title: 'Invalid capacity',
-        description: 'Enter a valid number for team capacity.',
-      });
-      return;
-    }
-
-    toast({
-      title: 'Team created',
-      description: `${trimmedName} is ready to receive interns.`,
-    });
-
-    setTeamName('');
-    setTeamCapacity('');
-    setTeamNotes('');
-  }
 
   return (
     <div className="p-8 space-y-8">
@@ -194,23 +148,16 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-sm font-medium uppercase tracking-[0.24em] text-text-muted">
                 Live Attendance
-              </CardTitle>
+              </CardTitle>  
               <Users className="h-5 w-5 text-accent-primary" />
             </div>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-end gap-3">
-                <span className="font-display text-4xl font-bold text-text-primary">
-                  {presentCount}
-                </span>
-                <span className="pb-1 text-2xl text-text-muted">/</span>
-                <span className="pb-1 text-2xl text-text-muted">{totalInterns}</span>
-              </div>
-              <CardDescription className="text-sm text-text-muted">
-                Present / Total
-              </CardDescription>
-              <div className="flex items-center gap-3 text-sm text-text-muted">
-                <span>Absent: {absentCount}</span>
-              </div>
+            <div className="flex items-end gap-3">
+              <span className="font-display text-4xl font-bold text-text-primary">
+              {presentCount}
+              </span>
+              <span className="pb-1 text-2xl text-text-muted">/</span>
+              <span className="pb-1 text-2xl text-text-muted">{totalInterns}</span>
+              <span className="ml-2 pb-1 text-sm text-text-muted">(Absent: {absentCount})</span>
             </div>
           </CardHeader>
           <CardContent>
@@ -253,57 +200,6 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                 Current team distribution and progress overview for this cohort.
               </CardDescription>
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-accent-primary text-bg-base hover:bg-accent-primary/90">
-                  Create team
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-xl border-border-color bg-bg-surface">
-                <DialogHeader>
-                  <DialogTitle className="text-text-primary">Create a team</DialogTitle>
-                  <DialogDescription className="text-text-muted">
-                    Add a new team for this batch and assign interns later.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateTeam} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-primary">Team name</label>
-                    <Input
-                      value={teamName}
-                      onChange={(event) => setTeamName(event.target.value)}
-                      placeholder="e.g. Ops Vanguard"
-                      className="bg-bg-surface border-border-color text-text-primary placeholder:text-text-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-primary">Team capacity</label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={teamCapacity}
-                      onChange={(event) => setTeamCapacity(event.target.value)}
-                      placeholder="Optional"
-                      className="bg-bg-surface border-border-color text-text-primary placeholder:text-text-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-text-primary">Notes</label>
-                    <Textarea
-                      value={teamNotes}
-                      onChange={(event) => setTeamNotes(event.target.value)}
-                      placeholder="Optional focus, goals, or constraints."
-                      className="min-h-24 bg-bg-surface border-border-color text-text-primary placeholder:text-text-muted"
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button type="submit" className="bg-accent-primary text-bg-base hover:bg-accent-primary/90">
-                      Create team
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
           </div>
         </CardHeader>
         <CardContent>
