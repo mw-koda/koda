@@ -1,9 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getAttendanceLogsByDate, interns } from '@/lib/mock-data';
+import { batchCatalog, getAttendanceLogsByDate, interns } from '@/lib/mock-data';
 
 function formatTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('en-US', {
@@ -14,7 +17,13 @@ function formatTime(dateStr: string) {
 
 type AttendanceStatus = 'pending' | 'present' | 'absent';
 
-export default function TeamLeadAttendancePage() {
+export default function AdminLiveAttendancePage() {
+  const searchParams = useSearchParams();
+  const batchId = searchParams.get('batchId');
+  const backHref = batchId ? `/admin/batches/${batchId}` : '/admin/batches';
+  const batchName = batchId
+    ? batchCatalog.find((batch) => batch.id === batchId)?.name
+    : null;
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(
     today.toISOString().slice(0, 10)
@@ -46,12 +55,19 @@ export default function TeamLeadAttendancePage() {
 
   return (
     <div className="p-8">
+      <Link
+        href={backHref}
+        className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text-primary transition-colors mb-4"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back to {batchName || 'batches'}
+      </Link>
       <div className="mb-6">
         <h1 className="text-3xl font-mono font-bold text-text-primary mb-2">
-          Intern Attendance Checking
+          Live Attendance
         </h1>
         <p className="text-text-muted">
-          Double-check attendance while interns are on the call.
+          Monitor and confirm attendance while interns are on the call.
         </p>
       </div>
 

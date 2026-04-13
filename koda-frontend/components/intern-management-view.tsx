@@ -14,6 +14,7 @@ type InternManagementViewProps = {
   subtitle?: string;
   showAssignedPeriod?: boolean;
   showReportStatus?: boolean;
+  teamFilter?: string;
 };
 
 function getReportStatusClass(status: string) {
@@ -35,12 +36,16 @@ export default function InternManagementView({
   subtitle = 'Manage and monitor intern progress and performance',
   showAssignedPeriod = true,
   showReportStatus = true,
+  teamFilter,
 }: InternManagementViewProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReportStatusFilter>('all');
+  const availableInterns = teamFilter
+    ? interns.filter((intern) => intern.team === teamFilter)
+    : interns;
 
   const filtered = useMemo(() => {
-    return interns.filter((intern) => {
+    return availableInterns.filter((intern) => {
       const matchesSearch =
         intern.name.toLowerCase().includes(search.toLowerCase()) ||
         intern.github.toLowerCase().includes(search.toLowerCase());
@@ -51,7 +56,7 @@ export default function InternManagementView({
 
       return matchesSearch && matchesStatus;
     });
-  }, [search, statusFilter]);
+  }, [availableInterns, search, statusFilter, showReportStatus]);
 
   return (
     <div className="p-8">
@@ -216,8 +221,8 @@ export default function InternManagementView({
 
         <div className="px-6 py-3 border-t border-border-color">
           <p className="text-center text-xs text-text-muted">
-            Showing {filtered.length} of {interns.length} intern
-            {interns.length !== 1 ? 's' : ''}
+            Showing {filtered.length} of {availableInterns.length} intern
+            {availableInterns.length !== 1 ? 's' : ''}
           </p>
         </div>
       </Card>

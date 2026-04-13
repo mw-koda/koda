@@ -13,8 +13,7 @@ export function Header() {
     const selectedRole = localStorage.getItem('selectedRole') || 'coordinator';
     const user = roleToUserMap[selectedRole as keyof typeof roleToUserMap] || roleToUserMap.coordinator;
     setCurrentUser(user);
-    const normalizedRole = user.role === 'team-lead' ? 'team lead' : user.role;
-    setRoleLabel(normalizedRole.toUpperCase());
+    setRoleLabel(user.role.toUpperCase());
   }, []);
 
   return (

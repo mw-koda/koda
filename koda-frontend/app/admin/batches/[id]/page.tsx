@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { batchCatalog, type BatchCatalogEntry } from '@/lib/mock-data';
+import { batchCatalog, getAttendanceLogsByDate, interns, type BatchCatalogEntry } from '@/lib/mock-data';
+import { slugifyTeamName } from '@/lib/team-utils';
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -21,8 +22,13 @@ function getDaysRemaining(endDate: string) {
   return Math.max(Math.ceil(differenceInMs / (1000 * 60 * 60 * 24)), 0);
 }
 
-function getEnrollmentProgress(batch: BatchCatalogEntry) {
-  return Math.min(Math.round((batch.enrolledCount / batch.maxInterns) * 100), 100);
+function getTeamProgress(scores: number[]) {
+  if (scores.length === 0) {
+    return 0;
+  }
+
+  const total = scores.reduce((sum, score) => sum + score, 0);
+  return Math.round(total / scores.length);
 }
 
 function BatchNotFound() {
@@ -54,6 +60,13 @@ function BatchNotFound() {
 
 export default function BatchDetailsPage({ params }: { params: { id: string } }) {
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const attendanceLogs = useMemo(
+    () => getAttendanceLogsByDate(selectedDate),
+    [selectedDate]
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -69,8 +82,22 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
     return <BatchNotFound />;
   }
 
-  const progress = getEnrollmentProgress(batch);
   const daysRemaining = getDaysRemaining(batch.endDate);
+  const presentCount = new Set(attendanceLogs.map((log) => log.internId)).size;
+  const totalInterns = interns.length;
+  const absentCount = Math.max(totalInterns - presentCount, 0);
+  const teamMap = interns.reduce((acc, intern) => {
+    const entry = acc.get(intern.team) || { name: intern.team, internCount: 0, scores: [] as number[] };
+    entry.internCount += 1;
+    entry.scores.push(intern.score);
+    acc.set(intern.team, entry);
+    return acc;
+  }, new Map<string, { name: string; internCount: number; scores: number[] }>());
+  const teamSummaries = Array.from(teamMap.values()).map((team) => ({
+    name: team.name,
+    internCount: team.internCount,
+    progress: getTeamProgress(team.scores),
+  }));
 
   return (
     <div className="p-8 space-y-8">
@@ -115,26 +142,37 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           </CardHeader>
         </Card>
 
-        <Card className="card-glow border-border-color bg-bg-surface">
+        <Link href={`/admin/live-attendance?batchId=${batch.id}`} className="block h-full">
+          <Card className="card-glow border-border-color bg-bg-surface h-full transition-colors hover:border-accent-primary/40 hover:bg-bg-elevated/50">
           <CardHeader className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-sm font-medium uppercase tracking-[0.24em] text-text-muted">
-                Capacity
-              </CardTitle>
+                Live Attendance
+              </CardTitle>  
               <Users className="h-5 w-5 text-accent-primary" />
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-3">
               <span className="font-display text-4xl font-bold text-text-primary">
-                {batch.enrolledCount}
+              {presentCount}
               </span>
               <span className="pb-1 text-2xl text-text-muted">/</span>
-              <span className="pb-1 text-2xl text-text-muted">{batch.maxInterns}</span>
+              <span className="pb-1 text-2xl text-text-muted">{totalInterns}</span>
+              <span className="ml-2 pb-1 text-sm text-text-muted">(Absent: {absentCount})</span>
             </div>
-            <CardDescription className="text-sm text-text-muted">
-              Enrolled / Total
-            </CardDescription>
           </CardHeader>
-        </Card>
+          <CardContent>
+            <label className="block text-xs font-semibold uppercase tracking-[0.24em] text-text-muted mb-2">
+              Attendance date
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(event) => setSelectedDate(event.target.value)}
+              className="w-full bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
+            />
+          </CardContent>
+          </Card>
+        </Link>
 
         <Card className="card-glow border-border-color bg-bg-surface">
           <CardHeader className="space-y-3">
@@ -152,35 +190,55 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
       </div>
 
       <Card className="card-glow border-border-color bg-bg-surface">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-2">
               <CardTitle className="text-xl font-display text-text-primary">
-                Enrollment Progress
+                Teams in this batch
               </CardTitle>
-              <CardDescription className="mt-1 text-text-muted">
-                {batch.enrolledCount} of {batch.maxInterns} slots are occupied.
+              <CardDescription className="text-text-muted">
+                Current team distribution and progress overview for this cohort.
               </CardDescription>
-            </div>
-            <div className="text-sm text-text-muted">
-              {progress}% utilized
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Progress
-            value={progress}
-            className="h-3 rounded-full bg-bg-elevated"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-text-muted">
-            <span>Timeline: {formatDate(batch.startDate)} - {formatDate(batch.endDate)}</span>
-            <span>Headcount: {batch.enrolledCount}/{batch.maxInterns}</span>
-          </div>
-          {batch.description ? (
-            <p className="max-w-4xl text-sm leading-6 text-text-muted">
-              {batch.description}
-            </p>
-          ) : null}
+        <CardContent>
+          {teamSummaries.length === 0 ? (
+            <div className="rounded-xl border border-border-color bg-bg-elevated p-6 text-text-muted">
+              No teams are assigned to this batch yet.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {teamSummaries.map((team) => {
+                const teamSlug = slugifyTeamName(team.name);
+
+                return (
+                  <Link
+                    key={team.name}
+                    href={`/admin/teams/${teamSlug}/dashboard`}
+                    className="group"
+                  >
+                    <div className="rounded-xl border border-border-color bg-bg-elevated p-5 transition-colors group-hover:border-accent-primary/40 group-hover:bg-bg-surface">
+                      <div className="space-y-2">
+                        <p className="text-lg font-semibold text-text-primary">
+                          {team.name}
+                        </p>
+                        <p className="text-sm text-text-muted">
+                          {team.internCount} interns | Overall Project Progress
+                        </p>
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        <Progress value={team.progress} className="h-2.5 rounded-full bg-bg-surface" />
+                        <p className="text-xs text-text-muted">
+                          {team.progress}% complete
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
