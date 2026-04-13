@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../supabase/supabase.service';
 import type { JwtPayload, UserRecord } from '../auth.service';
+import { USER_SELECT_FIELDS } from '../users/user-select';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -23,9 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     const response = await client
       .from('users')
-      .select(
-        'id, github_id, github_username, email, avatar_url, role, is_onboarded, created_at, updated_at',
-      )
+      .select(USER_SELECT_FIELDS)
       .eq('id', payload.sub)
       .single(); // explicit row shape cast to avoid unsafe any from the generic Supabase client
 
