@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { roleRedirects, type UserRole } from '@/lib/mock-data';
 import { useState, useEffect } from 'react';
+import { auth } from '@/lib/auth';
 
 const adminNavigation = [
   { name: 'User Management', href: '/admin', icon: ShieldCheck },
@@ -221,8 +222,8 @@ export function Sidebar() {
       <div className="p-4 border-t border-border-color">
         <button 
           onClick={() => {
-            localStorage.removeItem('selectedRole');
-            window.location.href = '/login';
+              auth.removeToken();
+              window.location.href = '/login';
           }}
           className="flex items-center px-3 py-2.5 text-sm font-medium rounded-md text-text-muted hover:text-text-primary hover:bg-bg-elevated/50 transition-colors w-full"
         >

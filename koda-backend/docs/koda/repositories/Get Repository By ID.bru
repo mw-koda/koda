@@ -1,0 +1,24 @@
+meta {
+  name: Get Repository By ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:3000/repositories/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: 3f8a1c6e-9b27-4d5f-8a91-2c7e6b4d9f13
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  Returns a single repository by its internal UUID.
+  Replace :id with the actual repository UUID.
+}

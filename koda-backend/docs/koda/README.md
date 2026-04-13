@@ -58,6 +58,11 @@ All protected endpoints use Bearer authentication with the `{{token}}` variable.
 - **Remove Team Member** (`DELETE /teams/:id/members/:userId`): Remove user from team (Team Lead only).
 - **Get Team Details** (`GET /teams/:id`): Get team with members.
 
+### Dashboard
+- **Get Dashboard Stats** (`GET /dashboard/stats`): Coordinator dashboard counters and average score.
+- **Get Dashboard Performance Trend** (`GET /dashboard/performance-trend`): Weekly average score trend.
+- **Get Dashboard Activity Feed** (`GET /dashboard/activity`): Recent merged activity feed.
+
 ## Variables
 - `{{token}}`: JWT token from OAuth
 - `{{teamId}}`: Team UUID (set after creating a team)
