@@ -128,7 +128,8 @@ export default function CoordinatorDashboardPage() {
         <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
           Coordinator Dashboard
         </h1>
-        <p className="text-text-muted">{today}</p>
+        <p className="text-text-primary">SCHOOL</p>
+        <p className="text-text-primary">{today}</p>
       </div>
  
       {/* Stat Cards */}
