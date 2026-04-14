@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CalendarRange, Layers, Users, Plus } from 'lucide-react';
+import { ArrowRight, CalendarRange, Layers, Users, Plus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { batchCatalog } from '@/lib/mock-data';
-// Import the component i built
+import { batchesApi, BatchSummary } from '@/lib/api/batches';
 import CreateBatchModal from './create-batch-modal/modal';
 
 function formatDateRange(startDate: string, endDate: string) {
@@ -22,10 +21,46 @@ function formatDateRange(startDate: string, endDate: string) {
 export default function AdminBatchesPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [batches, setBatches] = useState<BatchSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const fetchBatches = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await batchesApi.findAll();
+        setBatches(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load batches');
+        console.error('Error fetching batches:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBatches();
+  }, [isMounted]);
+
+  const handleCreateSuccess = () => {
+    // Refetch batches after successful creation
+    const fetchBatches = async () => {
+      try {
+        const data = await batchesApi.findAll();
+        setBatches(data);
+      } catch (err) {
+        console.error('Error refetching batches:', err);
+      }
+    };
+    fetchBatches();
+  };
 
   if (!isMounted) {
     return <div className="p-8 text-text-muted">Loading batches...</div>;
@@ -33,7 +68,7 @@ export default function AdminBatchesPage() {
 
   return (
     <div className="p-8">
-      {/* New Header Section for Batch Management */}
+      {/* Header Section for Batch Management */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="font-display text-4xl font-bold text-text-primary">
@@ -67,8 +102,20 @@ export default function AdminBatchesPage() {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          {batchCatalog.length === 0 ? (
-            /* Enhanced Empty State - Automatically triggers when no batches are present */
+          {isLoading ? (
+            <div className="flex justify-center items-center p-12">
+              <div className="animate-spin rounded-full h-8 w-8 border border-accent-primary/20 border-t-accent-primary" />
+            </div>
+          ) : error ? (
+            <div className="flex gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-500">Error loading batches</p>
+                <p className="text-sm text-red-500/80">{error}</p>
+              </div>
+            </div>
+          ) : batches.length === 0 ? (
+            /* Empty State */
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-color bg-bg-elevated/20 p-12 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-primary/10 mb-4 text-accent-primary">
                 <Layers className="h-8 w-8" />
@@ -87,7 +134,7 @@ export default function AdminBatchesPage() {
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              {batchCatalog.map((batch) => (
+              {batches.map((batch) => (
                 <Link key={batch.id} href={`/admin/batches/${batch.id}`} className="group">
                   <div className="h-full rounded-xl border border-border-color bg-bg-elevated p-5 transition-colors group-hover:border-accent-primary/50 group-hover:bg-bg-surface">
                     <div className="flex items-start justify-between gap-4">
@@ -95,8 +142,8 @@ export default function AdminBatchesPage() {
                         <p className="text-lg font-semibold text-text-primary">
                           {batch.name}
                         </p>
-                        <p className="mt-2 text-sm text-text-muted">
-                          {batch.description}
+                        <p className="mt-2 text-sm text-text-muted line-clamp-2">
+                          {batch.description || 'No description'}
                         </p>
                       </div>
                       <ArrowRight className="mt-1 h-5 w-5 text-accent-primary transition-transform group-hover:translate-x-0.5" />
@@ -142,7 +189,8 @@ export default function AdminBatchesPage() {
       {/* The Batch Creation Modal */}
       <CreateBatchModal 
         isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleCreateSuccess}
       />
     </div>
   );

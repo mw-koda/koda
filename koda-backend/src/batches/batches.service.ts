@@ -16,6 +16,7 @@ type BatchRow = {
   start_date: string;
   end_date: string;
   max_interns: number;
+  join_code: string;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -43,6 +44,8 @@ type BatchSummary = {
   enrolledCount: number;
   availableSlots: number;
   isFull: boolean;
+  status: 'active' | 'completed';
+  joinCode: string;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -376,6 +379,8 @@ export class BatchesService {
     batch: BatchRow,
     enrolledCount: number,
   ): BatchSummary {
+    const status = this.computeStatus(batch.start_date, batch.end_date);
+    
     return {
       id: batch.id,
       name: batch.name,
@@ -386,9 +391,31 @@ export class BatchesService {
       enrolledCount,
       availableSlots: Math.max(batch.max_interns - enrolledCount, 0),
       isFull: enrolledCount >= batch.max_interns,
+      status,
+      joinCode: batch.join_code,
       createdAt: batch.created_at,
       updatedAt: batch.updated_at,
     };
+  }
+
+  private computeStatus(startDate: string, endDate: string): 'active' | 'completed' {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (now > end) {
+      return 'completed';
+    }
+    return 'active';
+  }
+
+  private generateJoinCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 
   private buildBatchPayload(input: CreateBatchDto | UpdateBatchDto) {
@@ -405,13 +432,21 @@ export class BatchesService {
       'maxInterns',
     );
 
-    return {
+    const payload: any = {
       name,
       description: description ?? null,
       start_date: startDate,
       end_date: endDate,
       max_interns: maxInterns,
     };
+
+    // Only add join_code for CreateBatchDto
+    if ('joinCode' in input) {
+      const joinCode = input.joinCode?.trim() || this.generateJoinCode();
+      payload.join_code = joinCode;
+    }
+
+    return payload;
   }
 
   private normalizeDate(value: string | Date | undefined): string {
