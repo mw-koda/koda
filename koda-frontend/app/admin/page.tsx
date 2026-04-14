@@ -1,58 +1,94 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { Github, PencilLine, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui/table';
-import { Card } from '@/components/ui/card';
 import { users as initialUsers, type User } from '@/lib/mock-data';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Github, PencilLine, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 type UserFormValues = {
   name: string;
   github: string;
   role: User['role'];
   status: User['status'];
+  school?: string;
 };
+
+const userFormSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Name is required.'),
+    github: z.string().trim().min(1, 'GitHub username is required.'),
+    role: z.enum(['admin', 'coordinator', 'intern']),
+    status: z.enum(['active', 'pending', 'inactive']),
+    school: z.string().trim().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.role === 'coordinator' && !values.school) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['school'],
+        message: 'Coordinator school is required.',
+      });
+    }
+  });
 
 const roleOptions: Array<{ value: User['role']; label: string }> = [
   { value: 'admin', label: 'Admin' },
   { value: 'coordinator', label: 'Coordinator' },
   { value: 'intern', label: 'Intern' },
+];
+
+const coordinatorSchoolSuggestions = [
+  'Ateneo de Manila University',
+  'De La Salle University',
+  'University of the Philippines Diliman',
+  'University of Santo Tomas',
+  'Mapua University',
+  'Polytechnic University of the Philippines',
+  'Far Eastern University',
+  'Adamson University',
+  'Pamantasan ng Lungsod ng Maynila',
+  'National University',
+  'San Beda University',
+  'Centro Escolar University',
 ];
 
 function getRoleBadgeVariant(role: User['role']) {
@@ -106,6 +142,7 @@ function getDefaultValues(user: User | null): UserFormValues {
       github: '',
       role: 'intern',
       status: 'active',
+      school: '',
     };
   }
 
@@ -114,6 +151,7 @@ function getDefaultValues(user: User | null): UserFormValues {
     github: user.github,
     role: user.role,
     status: user.status,
+    school: '',
   };
 }
 
@@ -129,8 +167,41 @@ function UserDialog({
   onSave: (values: UserFormValues) => void;
 }) {
   const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
     defaultValues: getDefaultValues(user),
   });
+  const selectedRole = form.watch('role');
+  const schoolQuery = (form.watch('school') ?? '').trim();
+  const schoolMatches = useMemo(() => {
+    if (selectedRole !== 'coordinator' || schoolQuery.length === 0) {
+      return [];
+    }
+
+    const normalizedQuery = schoolQuery.toLowerCase();
+
+    return coordinatorSchoolSuggestions
+      .map((school) => {
+        const normalizedSchool = school.toLowerCase();
+        const startsWith = normalizedSchool.startsWith(normalizedQuery);
+        const includes = normalizedSchool.includes(normalizedQuery);
+        const score = startsWith ? 3 : includes ? 2 : 0;
+        return { school, score };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => {
+        if (a.score !== b.score) {
+          return b.score - a.score;
+        }
+
+        return a.school.localeCompare(b.school);
+      })
+      .map((entry) => entry.school)
+      .slice(0, 5);
+  }, [schoolQuery, selectedRole]);
+  const closestSchool = schoolMatches[0] ?? null;
+  const closestMatchStart = closestSchool
+    ? closestSchool.toLowerCase().indexOf(schoolQuery.toLowerCase())
+    : -1;
 
   useEffect(() => {
     if (open) {
@@ -170,7 +241,6 @@ function UserDialog({
               <FormField
                 control={form.control}
                 name="name"
-                rules={{ required: 'Name is required.' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Name</FormLabel>
@@ -185,7 +255,6 @@ function UserDialog({
               <FormField
                 control={form.control}
                 name="github"
-                rules={{ required: 'GitHub username is required.' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>GitHub Username</FormLabel>
@@ -205,7 +274,6 @@ function UserDialog({
               <FormField
                 control={form.control}
                 name="role"
-                rules={{ required: 'Role is required.' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
@@ -231,7 +299,6 @@ function UserDialog({
               <FormField
                 control={form.control}
                 name="status"
-                rules={{ required: 'Status is required.' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
@@ -252,6 +319,72 @@ function UserDialog({
                 )}
               />
             </div>
+
+            {selectedRole === 'coordinator' && (
+              <div className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                <FormField
+                  control={form.control}
+                  name="school"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Coordinator School</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="selection:bg-accent-primary/30 selection:text-text-primary focus-visible:ring-1 focus-visible:ring-accent-primary/40"
+                          autoComplete="off"
+                          placeholder="Mountain Ridge High School"
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            field.onChange(nextValue);
+
+                            const normalizedNextValue = nextValue.trim().toLowerCase();
+                            if (!normalizedNextValue) {
+                              return;
+                            }
+
+                            const startsWithMatch = coordinatorSchoolSuggestions.find((school) =>
+                              school.toLowerCase().startsWith(normalizedNextValue)
+                            );
+
+                            if (
+                              startsWithMatch &&
+                              startsWithMatch.toLowerCase() !== normalizedNextValue
+                            ) {
+                              const inputElement = event.currentTarget;
+                              form.setValue('school', startsWithMatch, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true,
+                              });
+                              requestAnimationFrame(() => {
+                                inputElement.setSelectionRange(nextValue.length, startsWithMatch.length);
+                              });
+                            }
+                          }}
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === 'Tab' &&
+                              closestSchool &&
+                              schoolQuery.length > 0 &&
+                              closestSchool.toLowerCase() !== schoolQuery.toLowerCase()
+                            ) {
+                              event.preventDefault();
+                              form.setValue('school', closestSchool, {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                                shouldValidate: true,
+                              });
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <DialogFooter className="mt-2 gap-2 sm:gap-2">
               <Button
