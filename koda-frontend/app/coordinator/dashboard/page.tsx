@@ -95,6 +95,7 @@ export default function CoordinatorDashboardPage() {
     day: 'numeric',
   });
  
+  const school = 'Cebu Institute of Technology University'; // Replace with actual school data
   const pendingReports = interns.filter((i) => i.reportStatus === 'pending');
   const openIssues = issues.filter((i) => i.status === 'open');
   const avgScore = Math.round(
@@ -128,7 +129,7 @@ export default function CoordinatorDashboardPage() {
         <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
           Coordinator Dashboard
         </h1>
-        <p className="text-text-primary">SCHOOL</p>
+        <p className="text-text-primary">{school}</p>
         <p className="text-text-primary">{today}</p>
       </div>
  
