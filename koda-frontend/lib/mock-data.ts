@@ -12,6 +12,7 @@ export interface Intern {
   role: string;
   team: 'Database Team' | 'GHL Team' | 'Scraping Team' | 'Agentic Rag';
   organizationId?: string;
+  school?: string;
 }
 
 export interface Organization {
@@ -133,6 +134,7 @@ export const interns: Intern[] = [
     role: 'Frontend Intern',
     team: 'GHL Team',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
   },
   {
     id: '2',
@@ -148,6 +150,8 @@ export const interns: Intern[] = [
     role: 'Backend Intern',
     team: 'Database Team',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
+
   },
   {
     id: '3',
@@ -163,6 +167,8 @@ export const interns: Intern[] = [
     role: 'Full-Stack Intern',
     team: 'Agentic Rag',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
+
   },
   {
     id: '4',
@@ -178,6 +184,8 @@ export const interns: Intern[] = [
     role: 'DevOps Intern',
     team: 'Scraping Team',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
+
   },
   {
     id: '5',
@@ -193,6 +201,8 @@ export const interns: Intern[] = [
     role: 'Frontend Intern',
     team: 'GHL Team',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
+
   },
   {
     id: '6',
@@ -208,6 +218,8 @@ export const interns: Intern[] = [
     role: 'Backend Intern',
     team: 'Database Team',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
+
   },
   {
     id: '7',
@@ -223,6 +235,8 @@ export const interns: Intern[] = [
     role: 'Full-Stack Intern',
     team: 'Agentic Rag',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
+
   },
   {
     id: '8',
@@ -238,6 +252,8 @@ export const interns: Intern[] = [
     role: 'Frontend Intern',
     team: 'Scraping Team',
     organizationId: 'org-1',
+    school: 'Cebu Institute of Technology University',
+
   },
 ];
 
