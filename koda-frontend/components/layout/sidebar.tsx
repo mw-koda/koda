@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { roleRedirects, type UserRole } from '@/lib/mock-data';
-import { useState, useEffect } from 'react';
+import { roleRedirects } from '@/lib/role-redirects';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { auth } from '@/lib/auth';
 
 const adminNavigation = [
@@ -35,22 +35,17 @@ function isAdminNavItemActive(pathname: string, href: string) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [isMounted, setIsMounted] = useState(false);
-  const [currentRole, setCurrentRole] = useState<string>('coordinator');
+  const { user, isLoading } = useCurrentUser();
+  const normalizedRole = user?.role === 'team_lead' ? 'coordinator' : user?.role;
+  const currentRole = normalizedRole ?? 'coordinator';
 
-  useEffect(() => {
-    setIsMounted(true);
-    const selectedRole = localStorage.getItem('selectedRole') || 'coordinator';
-    setCurrentRole(selectedRole);
-  }, []);
-
-  if (!isMounted) {
+  if (isLoading) {
     return (
       <div className="fixed left-0 top-0 h-screen w-60 bg-bg-surface border-r border-border-color" />
     );
   }
 
-  const dashboardHref = roleRedirects[currentRole as UserRole] || '/login';
+  const dashboardHref = roleRedirects[currentRole] || '/login';
   const isDashboardRoute = pathname === dashboardHref || pathname.startsWith(dashboardHref + '/');
   const isIntern = currentRole === 'intern';
   const isAdmin = currentRole === 'admin';
