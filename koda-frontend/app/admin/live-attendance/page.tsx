@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { batchCatalog, getAttendanceLogsByDate, interns } from '@/lib/mock-data';
+import { ArrowUpDown, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { batchCatalog, getAttendanceLogsByDate, interns } from '@/lib/mock-data';
+import { useEffect, useMemo, useState } from 'react';
 
 function formatTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('en-US', {
@@ -16,6 +16,15 @@ function formatTime(dateStr: string) {
 }
 
 type AttendanceStatus = 'pending' | 'present' | 'absent';
+type SortKey = 'internName' | 'team' | 'status';
+type SortDirection = 'asc' | 'desc';
+
+type AttendanceRow = {
+  id: string;
+  internName: string;
+  team: string;
+  clockIn: string | null;
+};
 
 export default function AdminLiveAttendancePage() {
   const searchParams = useSearchParams();
@@ -28,10 +37,24 @@ export default function AdminLiveAttendancePage() {
   const [selectedDate, setSelectedDate] = useState(
     today.toISOString().slice(0, 10)
   );
+  const [isMounted, setIsMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusById, setStatusById] = useState<Record<string, AttendanceStatus>>({});
+  const [clockInById, setClockInById] = useState<Record<string, string>>({});
   const [noteById, setNoteById] = useState<Record<string, string>>({});
+  const [sortConfig, setSortConfig] = useState<{
+    key: SortKey;
+    direction: SortDirection;
+  }>({
+    key: 'internName',
+    direction: 'asc',
+  });
 
-  const rows = useMemo(() => {
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const rows = useMemo<AttendanceRow[]>(() => {
     const logsByIntern = new Map(
       getAttendanceLogsByDate(selectedDate).map((log) => [log.internId, log])
     );
@@ -49,8 +72,77 @@ export default function AdminLiveAttendancePage() {
       .sort((a, b) => a.internName.localeCompare(b.internName));
   }, [selectedDate]);
 
-  function setStatus(internId: string, status: AttendanceStatus) {
+  const filteredAndSortedRows = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const searchedRows = normalizedQuery
+      ? rows.filter((row) =>
+          row.internName.toLowerCase().includes(normalizedQuery)
+        )
+      : rows;
+
+    const withIndex = searchedRows.map((row, index) => ({ row, index }));
+    withIndex.sort((a, b) => {
+      const aStatus = statusById[a.row.id] || 'pending';
+      const bStatus = statusById[b.row.id] || 'pending';
+      const aValue =
+        sortConfig.key === 'status'
+          ? aStatus
+          : sortConfig.key === 'team'
+            ? a.row.team
+            : a.row.internName;
+      const bValue =
+        sortConfig.key === 'status'
+          ? bStatus
+          : sortConfig.key === 'team'
+            ? b.row.team
+            : b.row.internName;
+      const compare = String(aValue).localeCompare(String(bValue));
+
+      if (compare !== 0) {
+        return sortConfig.direction === 'asc' ? compare : -compare;
+      }
+
+      return a.index - b.index;
+    });
+
+    return withIndex.map(({ row }) => row);
+  }, [rows, searchQuery, sortConfig, statusById]);
+
+  function setStatus(internId: string, status: AttendanceStatus, options?: { clockInNow?: boolean }) {
     setStatusById((prev) => ({ ...prev, [internId]: status }));
+    if (status === 'present' && options?.clockInNow) {
+      setClockInById((prev) => ({
+        ...prev,
+        [internId]: new Date().toISOString(),
+      }));
+    }
+    if (status === 'absent') {
+      setClockInById((prev) => {
+        const next = { ...prev };
+        delete next[internId];
+        return next;
+      });
+    }
+  }
+
+  function toggleSort(key: SortKey) {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return {
+          key,
+          direction: prev.direction === 'asc' ? 'desc' : 'asc',
+        };
+      }
+
+      return {
+        key,
+        direction: 'asc',
+      };
+    });
+  }
+
+  if (!isMounted) {
+    return <div className="p-8 text-text-muted">Loading attendance...</div>;
   }
 
   return (
@@ -83,22 +175,58 @@ export default function AdminLiveAttendancePage() {
         />
       </div>
 
-      <Card className="bg-bg-surface border-border-color overflow-hidden">
+      <Card className="card-glow bg-bg-surface border-border-color overflow-hidden">
+        <div className="border-b border-border-color bg-bg-elevated/20 px-6 py-4">
+          <label
+            htmlFor="attendance-search"
+            className="mb-2 block text-xs font-semibold uppercase text-text-muted"
+          >
+            Search
+          </label>
+          <input
+            id="attendance-search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by intern name"
+            className="w-full max-w-sm bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border-color bg-bg-elevated/30">
                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">
-                  Intern Name
+                  <button
+                    type="button"
+                    onClick={() => toggleSort('internName')}
+                    className="inline-flex items-center gap-1 hover:text-text-primary transition-colors"
+                  >
+                    Intern Name
+                    <ArrowUpDown className="h-3.5 w-3.5" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">
                   In
                 </th>
                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">
-                  Team
+                  <button
+                    type="button"
+                    onClick={() => toggleSort('team')}
+                    className="inline-flex items-center gap-1 hover:text-text-primary transition-colors"
+                  >
+                    Team
+                    <ArrowUpDown className="h-3.5 w-3.5" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">
-                  Status
+                  <button
+                    type="button"
+                    onClick={() => toggleSort('status')}
+                    className="inline-flex items-center gap-1 hover:text-text-primary transition-colors"
+                  >
+                    Status
+                    <ArrowUpDown className="h-3.5 w-3.5" />
+                  </button>
                 </th>
                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">
                   Note
@@ -109,16 +237,21 @@ export default function AdminLiveAttendancePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-color">
-              {rows.length > 0 ? (
-                rows.map((row) => {
+              {filteredAndSortedRows.length > 0 ? (
+                filteredAndSortedRows.map((row) => {
                   const status = statusById[row.id] || 'pending';
+                  const clockIn = status === 'absent'
+                    ? null
+                    : status === 'present'
+                      ? clockInById[row.id] || row.clockIn
+                      : row.clockIn;
                   return (
                     <tr key={row.id} className="hover:bg-bg-elevated/50">
                       <td className="px-6 py-4 text-sm text-text-primary font-medium">
                         {row.internName}
                       </td>
                       <td className="px-6 py-4 text-sm text-text-muted">
-                        {row.clockIn ? formatTime(row.clockIn) : '--'}
+                        {clockIn ? formatTime(clockIn) : '--'}
                       </td>
                       <td className="px-6 py-4 text-sm text-text-muted">
                         {row.team}
@@ -147,13 +280,14 @@ export default function AdminLiveAttendancePage() {
                             }))
                           }
                           placeholder="Add note if absent"
-                          className="w-56 bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-primary"
+                          disabled={status !== 'absent'}
+                          className="w-56 bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-xs text-text-primary disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-accent-primary"
                         />
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-2">
                           <button
-                            onClick={() => setStatus(row.id, 'present')}
+                            onClick={() => setStatus(row.id, 'present', { clockInNow: true })}
                             className="px-3 py-1 text-xs font-semibold text-emerald-500 border border-emerald-500/30 rounded-md hover:bg-emerald-500/10 transition-colors"
                           >
                             Present
