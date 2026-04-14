@@ -17,6 +17,9 @@ import { JoinOrganizationCard } from '@/components/join-organization-card';
 import Link from 'next/link';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+// --- ADDED IMPORT ---
+import JoinTeamModal from '../../admin/batches/join-team-modal/modal';
+
 function StatCard({
   title,
   value,
@@ -88,12 +91,20 @@ function formatTimestamp(timestamp: string) {
 export default function InternDashboardPage() {
   const [currentRole, setCurrentRole] = useState<string>(mockAuthConfig.role);
   const [userOrganizationId, setUserOrganizationId] = useState<string | undefined>(mockAuthConfig.organizationId);
+  
+  // --- ADDED STATE FOR MODAL ---
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem('selectedRole') || mockAuthConfig.role;
     const orgId = localStorage.getItem('userOrganizationId') || mockAuthConfig.organizationId;
     setCurrentRole(role);
     setUserOrganizationId(orgId || undefined);
+
+    // --- LOGIC: Trigger modal if intern is unassigned ---
+    if (role === 'intern' && !orgId) {
+      setShowJoinModal(true);
+    }
   }, []);
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -126,6 +137,12 @@ export default function InternDashboardPage() {
       {currentRole === 'intern' && (
         <JoinOrganizationCard currentOrganizationId={userOrganizationId} />
       )}
+
+      {/* --- ADDED MODAL COMPONENT --- */}
+      <JoinTeamModal 
+        isOpen={showJoinModal} 
+        onClose={() => setShowJoinModal(false)} 
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
