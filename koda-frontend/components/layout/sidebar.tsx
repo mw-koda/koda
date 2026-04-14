@@ -71,7 +71,6 @@ export function Sidebar() {
         : [
             { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
             managementItem,
-            { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
             { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
           ];
 

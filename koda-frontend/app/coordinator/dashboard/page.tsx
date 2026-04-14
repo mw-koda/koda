@@ -95,6 +95,7 @@ export default function CoordinatorDashboardPage() {
     day: 'numeric',
   });
  
+  const school = 'Cebu Institute of Technology University'; // Replace with actual school data
   const pendingReports = interns.filter((i) => i.reportStatus === 'pending');
   const openIssues = issues.filter((i) => i.status === 'open');
   const avgScore = Math.round(
@@ -128,11 +129,12 @@ export default function CoordinatorDashboardPage() {
         <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
           Coordinator Dashboard
         </h1>
-        <p className="text-text-muted">{today}</p>
+        <p className="text-text-primary">{school}</p>
+        <p className="text-text-primary">{today}</p>
       </div>
  
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 mb-8">
         <Card className="bg-bg-surface border-border-color p-6 card-glow">
           <div className="flex items-start justify-between">
             <div>
@@ -193,25 +195,7 @@ export default function CoordinatorDashboardPage() {
           </div>
         </Card>
  
-        <Card className="bg-bg-surface border-border-color p-6 card-glow">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-                Avg Performance Score
-              </p>
-              <p className="text-4xl font-mono font-bold text-text-primary mb-2">
-                {avgScore}.0%
-              </p>
-              <p className="text-xs text-accent-primary flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                +2.4% from last period
-              </p>
-            </div>
-            <div className="p-2 bg-accent-primary/10 rounded-lg">
-              <Target className="w-6 h-6 text-accent-primary" />
-            </div>
-          </div>
-        </Card>
+       
       </div>
  
       {/* GitHub Activity + Attendance Log */}
@@ -253,7 +237,7 @@ export default function CoordinatorDashboardPage() {
             })}
           </div>
           <Link
-            href="/issues"
+            href="/coordinator/issue-tracking-page"
             className="inline-block mt-4 text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
           >
             View all issues →
