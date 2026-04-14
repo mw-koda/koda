@@ -2,7 +2,8 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { batchCatalog, getAttendanceLogsByDate, interns } from '@/lib/mock-data';
+import { getAttendanceLogsByDate, interns } from '@/lib/mock-data';
+import { batchesApi } from '@/lib/api/batches';
 import { ArrowUpDown, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -30,15 +31,13 @@ export default function AdminLiveAttendancePage() {
   const searchParams = useSearchParams();
   const batchId = searchParams.get('batchId');
   const backHref = batchId ? `/admin/batches/${batchId}` : '/admin/batches';
-  const batchName = batchId
-    ? batchCatalog.find((batch) => batch.id === batchId)?.name
-    : null;
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(
     today.toISOString().slice(0, 10)
   );
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [batchName, setBatchName] = useState<string | null>(null);
   const [statusById, setStatusById] = useState<Record<string, AttendanceStatus>>({});
   const [clockInById, setClockInById] = useState<Record<string, string>>({});
   const [noteById, setNoteById] = useState<Record<string, string>>({});
@@ -53,6 +52,23 @@ export default function AdminLiveAttendancePage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!batchId || !isMounted) {
+      return;
+    }
+
+    const loadBatchName = async () => {
+      try {
+        const batch = await batchesApi.findOne(batchId);
+        setBatchName(batch.name);
+      } catch {
+        setBatchName(null);
+      }
+    };
+
+    void loadBatchName();
+  }, [batchId, isMounted]);
 
   const rows = useMemo<AttendanceRow[]>(() => {
     const logsByIntern = new Map(
