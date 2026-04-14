@@ -2,19 +2,21 @@
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { useState, useEffect } from 'react';
-import { roleToUserMap } from '@/lib/mock-data';
+import { useMemo } from 'react';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 export function Header() {
-  const [currentUser, setCurrentUser] = useState(roleToUserMap.coordinator);
-  const [roleLabel, setRoleLabel] = useState('COORDINATOR');
+  const { user } = useCurrentUser();
 
-  useEffect(() => {
-    const selectedRole = localStorage.getItem('selectedRole') || 'coordinator';
-    const user = roleToUserMap[selectedRole as keyof typeof roleToUserMap] || roleToUserMap.coordinator;
-    setCurrentUser(user);
-    setRoleLabel(user.role.toUpperCase());
-  }, []);
+  const displayName = user?.name || user?.github_username || 'User';
+  const roleLabel = (user?.role ?? 'coordinator').replace('_', ' ').toUpperCase();
+  const initials = useMemo(() => {
+    if (!displayName) return 'U';
+    const parts = displayName.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? '';
+    const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : '';
+    return (first + last || displayName[0] || 'U').toUpperCase();
+  }, [displayName]);
 
   return (
     <header className="fixed top-0 right-0 left-60 h-14 bg-bg-surface border-b border-border-color z-10">
@@ -22,7 +24,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           <div className="text-right">
             <div className="text-sm font-medium text-text-primary">
-              {currentUser.name}
+              {displayName}
             </div>
             <Badge
               variant="outline"
@@ -33,7 +35,7 @@ export function Header() {
           </div>
           <Avatar className="h-9 w-9 bg-bg-elevated border border-border-color">
             <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
-              {currentUser.avatarInitials}
+              {initials}
             </AvatarFallback>
           </Avatar>
         </div>

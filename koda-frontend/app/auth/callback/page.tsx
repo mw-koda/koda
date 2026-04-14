@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/auth';
+import { roleRedirects } from '@/lib/role-redirects';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -30,17 +31,10 @@ export default function AuthCallbackPage() {
         return res.json() as Promise<{ user: { role: string; is_onboarded: boolean } }>;
       })
       .then(({ user }) => {
-        if (!user.is_onboarded) {
-          router.replace('/onboarding');
-          return;
-        }
-        // Redirect based on role — adjust paths to match your app
-        const roleRedirect: Record<string, string> = {
-          admin: '/admin/dashboard',
-          mentor: '/mentor/dashboard',
-          intern: '/intern/dashboard',
-        };
-        router.replace(roleRedirect[user.role] ?? '/dashboard');
+        const normalizedRole = user.role === 'team_lead' ? 'coordinator' : user.role;
+        localStorage.setItem('selectedRole', normalizedRole);
+
+        router.replace(roleRedirects[normalizedRole] ?? '/dashboard');
       })
       .catch(() => {
         auth.removeToken();

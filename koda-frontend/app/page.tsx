@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { roleRedirects } from '@/lib/mock-data';
+import { roleRedirects } from '@/lib/role-redirects';
 
 export default function Home() {
   const router = useRouter();
@@ -12,9 +12,10 @@ export default function Home() {
     const selectedRole = typeof window !== 'undefined' && localStorage.getItem('selectedRole');
     
     if (selectedRole) {
+      const normalizedRole = selectedRole === 'team_lead' ? 'coordinator' : selectedRole;
       // User is logged in, redirect to role-specific dashboard
-      if (selectedRole in roleRedirects) {
-        router.push(roleRedirects[selectedRole as keyof typeof roleRedirects]);
+      if (normalizedRole in roleRedirects) {
+        router.push(roleRedirects[normalizedRole as keyof typeof roleRedirects]);
       } else {
         router.push('/login');
       }

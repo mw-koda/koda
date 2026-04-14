@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Header } from '@/components/layout/header';
+import { LayoutWrapper } from '@/components/layout/layout-wrapper';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
@@ -32,11 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Sidebar />
-        <Header />
-        <main className="ml-60 mt-14 min-h-screen">
+        <LayoutWrapper>
           {children}
-        </main>
+        </LayoutWrapper>
         <Toaster />
       </body>
     </html>
