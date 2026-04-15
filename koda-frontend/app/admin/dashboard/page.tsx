@@ -4,18 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AlertCircle } from 'lucide-react'; // Added for error state
 import * as mockData from '@/lib/mock-data';
-import AdminOnboardingView from './onboarding-view';
-import { getUsers } from '@/lib/api/users';
-
-type DashboardUser = {
-  id: string;
-  name: string;
-  role: 'admin' | 'coordinator' | 'team_lead' | 'intern';
-  status: 'active' | 'pending' | 'inactive';
-  joinedAt: string;
-};
-
+import { batchesApi, BatchSummary } from '@/lib/api/batches'; // Import the API
+import AdminOnboardingView from '../batches/onboarding-modal/onboarding-view';
 
 function getUserStatusClass(status: string) {
   switch (status) {
@@ -32,62 +24,47 @@ function getUserStatusClass(status: string) {
 
 export default function AdminDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
-  const [users, setUsers] = useState<DashboardUser[]>([]);
-  const [usersError, setUsersError] = useState<string | null>(null);
+  const [batches, setBatches] = useState<BatchSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
-
-    void (async () => {
-      try {
-        const response = await getUsers();
-        setUsers(
-          response.map((user) => ({
-            id: user.id,
-            name: user.name?.trim() || user.github_username,
-            role:
-              user.role === 'admin' ||
-              user.role === 'coordinator' ||
-              user.role === 'team_lead' ||
-              user.role === 'intern'
-                ? user.role
-                : 'intern',
-            status:
-              user.status === 'active' ||
-              user.status === 'pending' ||
-              user.status === 'inactive'
-                ? user.status
-                : user.is_onboarded
-                  ? 'active'
-                  : 'pending',
-            joinedAt:
-              user.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
-          })),
-        );
-      } catch (error: unknown) {
-        setUsersError(error instanceof Error ? error.message : 'Failed to load users');
-      }
-    })();
   }, []);
 
-  if (!isMounted) {
-    return <div className="p-8 text-text-muted">Loading dashboard...</div>;
+  // Fetch data logic moved from BatchesPage
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await batchesApi.findAll();
+        setBatches(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [isMounted]);
+
+  if (!isMounted || isLoading) {
+    return (
+      <div className="p-8 flex items-center gap-3 text-text-muted font-mono">
+        <div className="animate-spin rounded-full h-4 w-4 border-2 border-accent-primary/20 border-t-accent-primary" />
+        Initializing KODA Dashboard...
+      </div>
+    );
   }
 
-  const batches = mockData.batches ?? [];
-  const fallbackUsers = mockData.users.map((user) => ({
-    id: user.id,
-    name: user.name,
-    role: user.role,
-    status: user.status,
-    joinedAt: user.joinedAt,
-  }));
-  const usersToRender = usersError ? fallbackUsers : users;
-
+  // Users are still coming from mockData for now
+  const users = mockData.users ?? [];
   const showOnboarding = batches.length === 0;
-  if(showOnboarding) {
-    return <AdminOnboardingView />;
-  } 
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -96,12 +73,11 @@ export default function AdminDashboardPage() {
     day: 'numeric',
   });
 
-  const activeUsers = usersToRender.filter((user) => user.status === 'active');
-  const pendingUsers = usersToRender.filter((user) => user.status === 'pending');
-  const adminUsers = usersToRender.filter((user) => user.role === 'admin');
-  const interns = usersToRender.filter((user) => user.role === 'intern');
+  const activeUsers = users.filter((user) => user.status === 'active');
+  const pendingUsers = users.filter((user) => user.status === 'pending');
+  const interns = users.filter((user) => user.role === 'intern');
 
-  const newestUsers = [...usersToRender]
+  const newestUsers = [...users]
     .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime())
     .slice(0, 6);
 
@@ -112,13 +88,20 @@ export default function AdminDashboardPage() {
           Admin Dashboard
         </h1>
         <p className="text-text-muted">{today}</p>
+        
+        {error && (
+          <div className="mt-4 flex gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm">
+            <AlertCircle className="h-4 w-4" />
+            {error}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="bg-bg-surface border-border-color p-6 card-glow">
           <p className="text-label text-text-muted mb-2">Total Users</p>
           <p className="text-3xl font-mono font-bold text-text-primary">
-            {usersToRender.length}
+            {users.length}
           </p>
           <p className="text-xs text-text-muted mt-2">All roles</p>
         </Card>
@@ -183,6 +166,11 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </Card>
+
+      {/* Onboarding Modal triggers if batches.length is 0. 
+         Wait for isLoading to be false before showing to avoid "pop-in" 
+      */}
+      {!isLoading && <AdminOnboardingView isOpen={showOnboarding} />}
     </div>
   );
 }

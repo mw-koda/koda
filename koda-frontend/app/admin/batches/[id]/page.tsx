@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users } from 'lucide-react';
+import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users, Plus } from 'lucide-react'; // Added Plus icon
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { batchesApi, type BatchDetail } from '@/lib/api/batches';
+import CreateTeamModal from '../create-team-modal/modal'; // Adjust path based on your folder structure
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -53,20 +54,20 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
   const [batch, setBatch] = useState<BatchDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // 1. Add State for the Modal
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isMounted) {
-      return;
-    }
+    if (!isMounted) return;
 
     const loadBatch = async () => {
       setIsLoading(true);
       setError(null);
-
       try {
         const data = await batchesApi.findOne(params.id);
         setBatch(data);
@@ -81,11 +82,13 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
     void loadBatch();
   }, [isMounted, params.id]);
 
-  if (!isMounted) {
-    return <div className="p-8 text-text-muted">Loading batch details...</div>;
-  }
+  // 2. Add Success Handler
+  const handleTeamCreated = (payload: any) => {
+    console.log("Team created for batch:", params.id, payload);
+    // You can trigger a refetch here if you have a teams list to update
+  };
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return <div className="p-8 text-text-muted">Loading batch details...</div>;
   }
 
@@ -95,23 +98,6 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
   const daysRemaining = getDaysRemaining(batch.endDate);
   const totalInterns = batch.assignedInterns.length;
-  
-  // Build team map from assigned interns
-  const teamMap = batch.assignedInterns.reduce((acc, intern) => {
-    const teamId = intern.teamId;
-    if (!teamId) return acc; // Skip interns without team assignment
-    
-    const entry = acc.get(teamId) || { teamId, internCount: 0 };
-    entry.internCount += 1;
-    acc.set(teamId, entry);
-    return acc;
-  }, new Map<string, { teamId: string; internCount: number }>());
-  
-  const teamSummaries = Array.from(teamMap.values()).map((team) => ({
-    id: team.teamId,
-    internCount: team.internCount,
-    progress: 0, // Placeholder - teams need individual progress tracking
-  }));
 
   return (
     <div className="p-8 space-y-8">
@@ -128,12 +114,23 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           </p>
         </div>
 
-        <Button asChild variant="ghost" className="text-text-primary hover:bg-bg-elevated hover:text-text-primary">
-          <Link href="/admin/batches">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Batches
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* 3. Add Team Button */}
+          <Button 
+            onClick={() => setIsTeamModalOpen(true)}
+            className="bg-accent-primary hover:bg-accent-secondary text-white gap-2 px-6"
+          >
+            <Plus className="h-4 w-4" />
+            Add Team
+          </Button>
+
+          <Button asChild variant="ghost" className="text-text-primary hover:bg-bg-elevated hover:text-text-primary">
+            <Link href="/admin/batches">
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back to Batches
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -239,6 +236,13 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           )}
         </CardContent>
       </Card>
+
+      {/* 4. Render the Modal */}
+      <CreateTeamModal 
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
+        onSuccess={handleTeamCreated}
+      />
     </div>
   );
 }
