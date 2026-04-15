@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Layers, CalendarRange, Users } from 'lucide-react';
+import { ArrowRight, CalendarRange, Layers, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { batchCatalog } from '@/lib/mock-data';
@@ -40,10 +40,6 @@ export default function AdminBatchesPage() {
               <CardDescription className="mt-2 text-text-muted max-w-2xl">
                 Select a batch to inspect its operating window, capacity, and enrollment state.
               </CardDescription>
-            </div>
-            <div className="hidden rounded-full border border-accent-primary/20 bg-accent-primary/10 px-4 py-2 text-sm text-accent-primary md:flex items-center gap-2">
-              <Layers className="h-4 w-4" />
-              Command Center
             </div>
           </div>
         </CardHeader>

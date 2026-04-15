@@ -52,7 +52,6 @@ type UserFormValues = {
 const roleOptions: Array<{ value: User['role']; label: string }> = [
   { value: 'admin', label: 'Admin' },
   { value: 'coordinator', label: 'Coordinator' },
-  { value: 'team-lead', label: 'Team Lead' },
   { value: 'intern', label: 'Intern' },
 ];
 
@@ -62,8 +61,6 @@ function getRoleBadgeVariant(role: User['role']) {
       return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
     case 'coordinator':
       return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-    case 'team-lead':
-      return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
     case 'intern':
       return 'bg-accent-primary/10 text-accent-primary border-accent-primary/20';
     default:
@@ -85,9 +82,7 @@ function getStatusBadgeVariant(status: User['status']) {
 }
 
 function formatRoleLabel(role: User['role']) {
-  return role === 'team-lead'
-    ? 'Team Lead'
-    : role.charAt(0).toUpperCase() + role.slice(1);
+  return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
 function formatStatusLabel(status: User['status']) {
