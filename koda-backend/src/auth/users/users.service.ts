@@ -5,6 +5,7 @@ import type { UserRecord } from '../auth.service';
 import { USER_SELECT_FIELDS } from './user-select';
 import { OnboardUserDto } from './dto/onboard-user.dto';
 import { GetUsersQueryDto } from './dto/get-users.query.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -42,7 +43,7 @@ export class UsersService {
         .eq('id', existingResponse.data.id)
         .select(USER_SELECT_FIELDS)
         .single();
-
+        
       if (updateResponse.error || updateResponse.data === null) {
         this.logger.error(
           'Failed to update existing user during onboarding',
@@ -104,5 +105,46 @@ export class UsersService {
         return value?.toLowerCase().includes(search) ?? false;
       });
     });
+  }
+
+  async updateUser(id: string, dto: UpdateUserDto): Promise<UserRecord> {
+    const client = this.supabaseService.getClient();
+
+    const payload: {
+      name?: string;
+      github_username?: string;
+      role?: Role;
+      is_onboarded?: boolean;
+    } = {};
+
+    if (dto.name !== undefined) {
+      payload.name = dto.name;
+    }
+
+    if (dto.githubUsername !== undefined) {
+      payload.github_username = dto.githubUsername;
+    }
+
+    if (dto.role !== undefined) {
+      payload.role = dto.role;
+    }
+
+    if (dto.status !== undefined) {
+      payload.is_onboarded = dto.status === 'active';
+    }
+
+    const response = await client
+      .from('users')
+      .update(payload)
+      .eq('id', id)
+      .select(USER_SELECT_FIELDS)
+      .single();
+
+    if (response.error || response.data === null) {
+      this.logger.error('Failed to update user', response.error?.message);
+      throw new InternalServerErrorException('Failed to update user');
+    }
+
+    return response.data;
   }
 }

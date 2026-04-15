@@ -6,6 +6,15 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import * as mockData from '@/lib/mock-data';
 import AdminOnboardingView from './onboarding-view';
+import { getUsers } from '@/lib/api/users';
+
+type DashboardUser = {
+  id: string;
+  name: string;
+  role: 'admin' | 'coordinator' | 'team_lead' | 'intern';
+  status: 'active' | 'pending' | 'inactive';
+  joinedAt: string;
+};
 
 
 function getUserStatusClass(status: string) {
@@ -23,9 +32,42 @@ function getUserStatusClass(status: string) {
 
 export default function AdminDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
+  const [users, setUsers] = useState<DashboardUser[]>([]);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
+
+    void (async () => {
+      try {
+        const response = await getUsers();
+        setUsers(
+          response.map((user) => ({
+            id: user.id,
+            name: user.name?.trim() || user.github_username,
+            role:
+              user.role === 'admin' ||
+              user.role === 'coordinator' ||
+              user.role === 'team_lead' ||
+              user.role === 'intern'
+                ? user.role
+                : 'intern',
+            status:
+              user.status === 'active' ||
+              user.status === 'pending' ||
+              user.status === 'inactive'
+                ? user.status
+                : user.is_onboarded
+                  ? 'active'
+                  : 'pending',
+            joinedAt:
+              user.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+          })),
+        );
+      } catch (error: unknown) {
+        setUsersError(error instanceof Error ? error.message : 'Failed to load users');
+      }
+    })();
   }, []);
 
   if (!isMounted) {
@@ -33,7 +75,14 @@ export default function AdminDashboardPage() {
   }
 
   const batches = mockData.batches ?? [];
-  const users = mockData.users;
+  const fallbackUsers = mockData.users.map((user) => ({
+    id: user.id,
+    name: user.name,
+    role: user.role,
+    status: user.status,
+    joinedAt: user.joinedAt,
+  }));
+  const usersToRender = usersError ? fallbackUsers : users;
 
   const showOnboarding = batches.length === 0;
   if(showOnboarding) {
@@ -47,12 +96,12 @@ export default function AdminDashboardPage() {
     day: 'numeric',
   });
 
-  const activeUsers = users.filter((user) => user.status === 'active');
-  const pendingUsers = users.filter((user) => user.status === 'pending');
-  const adminUsers = users.filter((user) => user.role === 'admin');
-  const interns = users.filter((user) => user.role === 'intern');
+  const activeUsers = usersToRender.filter((user) => user.status === 'active');
+  const pendingUsers = usersToRender.filter((user) => user.status === 'pending');
+  const adminUsers = usersToRender.filter((user) => user.role === 'admin');
+  const interns = usersToRender.filter((user) => user.role === 'intern');
 
-  const newestUsers = [...users]
+  const newestUsers = [...usersToRender]
     .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime())
     .slice(0, 6);
 
@@ -69,7 +118,7 @@ export default function AdminDashboardPage() {
         <Card className="bg-bg-surface border-border-color p-6 card-glow">
           <p className="text-label text-text-muted mb-2">Total Users</p>
           <p className="text-3xl font-mono font-bold text-text-primary">
-            {users.length}
+            {usersToRender.length}
           </p>
           <p className="text-xs text-text-muted mt-2">All roles</p>
         </Card>

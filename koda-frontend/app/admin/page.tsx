@@ -1,102 +1,91 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
-import { users as initialUsers, type User } from '@/lib/mock-data';
+import { onboardUser, getUsers, updateUser, type ApiUserRole } from '@/lib/api/users';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Github, PencilLine, Plus } from 'lucide-react';
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+
+type UserRole = 'admin' | 'coordinator' | 'intern' | 'team_lead';
+type UserStatus = 'active' | 'pending' | 'inactive';
+
+type UiUser = {
+  id: string;
+  name: string;
+  github: string;
+  role: UserRole;
+  status: UserStatus;
+  joinedAt: string;
+  avatarInitials: string;
+};
 
 type UserFormValues = {
   name: string;
   github: string;
-  role: User['role'];
-  status: User['status'];
-  school?: string;
+  role: UserRole;
+  status: UserStatus;
 };
 
-const userFormSchema = z
-  .object({
-    name: z.string().trim().min(1, 'Name is required.'),
-    github: z.string().trim().min(1, 'GitHub username is required.'),
-    role: z.enum(['admin', 'coordinator', 'intern']),
-    status: z.enum(['active', 'pending', 'inactive']),
-    school: z.string().trim().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.role === 'coordinator' && !values.school) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['school'],
-        message: 'Coordinator school is required.',
-      });
-    }
-  });
+const userFormSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required.'),
+  github: z.string().trim().min(1, 'GitHub username is required.'),
+  role: z.enum(['admin', 'coordinator', 'intern', 'team_lead']),
+  status: z.enum(['active', 'pending', 'inactive']),
+});
 
-const roleOptions: Array<{ value: User['role']; label: string }> = [
+const roleOptions: Array<{ value: UserRole; label: string }> = [
   { value: 'admin', label: 'Admin' },
   { value: 'coordinator', label: 'Coordinator' },
+  { value: 'team_lead', label: 'Team Lead' },
   { value: 'intern', label: 'Intern' },
 ];
 
-const coordinatorSchoolSuggestions = [
-  'Ateneo de Manila University',
-  'De La Salle University',
-  'University of the Philippines Diliman',
-  'University of Santo Tomas',
-  'Mapua University',
-  'Polytechnic University of the Philippines',
-  'Far Eastern University',
-  'Adamson University',
-  'Pamantasan ng Lungsod ng Maynila',
-  'National University',
-  'San Beda University',
-  'Centro Escolar University',
-];
-
-function getRoleBadgeVariant(role: User['role']) {
+function getRoleBadgeVariant(role: UserRole) {
   switch (role) {
     case 'admin':
       return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
     case 'coordinator':
       return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+    case 'team_lead':
+      return 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20';
     case 'intern':
       return 'bg-accent-primary/10 text-accent-primary border-accent-primary/20';
     default:
@@ -104,7 +93,7 @@ function getRoleBadgeVariant(role: User['role']) {
   }
 }
 
-function getStatusBadgeVariant(status: User['status']) {
+function getStatusBadgeVariant(status: UserStatus) {
   switch (status) {
     case 'active':
       return 'bg-accent-primary/10 text-accent-primary border-accent-primary/20';
@@ -117,32 +106,78 @@ function getStatusBadgeVariant(status: User['status']) {
   }
 }
 
-function formatRoleLabel(role: User['role']) {
-  return role.charAt(0).toUpperCase() + role.slice(1);
+function formatRoleLabel(role: UserRole) {
+  return role
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
-function formatStatusLabel(status: User['status']) {
+function formatStatusLabel(status: UserStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function buildAvatarInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-    .slice(0, 2) || 'U';
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('')
+      .slice(0, 2) || 'U'
+  );
 }
 
-function getDefaultValues(user: User | null): UserFormValues {
+function normalizeStatus(input: { status?: string; is_onboarded?: boolean }): UserStatus {
+  if (input.status === 'active' || input.status === 'pending' || input.status === 'inactive') {
+    return input.status;
+  }
+
+  return input.is_onboarded ? 'active' : 'pending';
+}
+
+function normalizeRole(role: string): UserRole {
+  if (role === 'admin' || role === 'coordinator' || role === 'intern' || role === 'team_lead') {
+    return role;
+  }
+
+  return 'intern';
+}
+
+function mapApiUsersToUiUsers(
+  apiUsers: Array<{
+    id: string;
+    name: string | null;
+    github_username: string;
+    role: string;
+    created_at: string;
+    is_onboarded: boolean;
+    status?: string;
+  }>,
+): UiUser[] {
+  return apiUsers.map((user) => {
+    const displayName = user.name?.trim() || user.github_username;
+
+    return {
+      id: user.id,
+      name: displayName,
+      github: user.github_username,
+      role: normalizeRole(user.role),
+      status: normalizeStatus(user),
+      joinedAt: user.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+      avatarInitials: buildAvatarInitials(displayName),
+    };
+  });
+}
+
+function getDefaultValues(user: UiUser | null): UserFormValues {
   if (!user) {
     return {
       name: '',
       github: '',
       role: 'intern',
       status: 'active',
-      school: '',
     };
   }
 
@@ -151,57 +186,26 @@ function getDefaultValues(user: User | null): UserFormValues {
     github: user.github,
     role: user.role,
     status: user.status,
-    school: '',
   };
 }
 
 function UserDialog({
   open,
   user,
+  isSubmitting,
   onOpenChange,
   onSave,
 }: {
   open: boolean;
-  user: User | null;
+  user: UiUser | null;
+  isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (values: UserFormValues) => void;
+  onSave: (values: UserFormValues) => Promise<void>;
 }) {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: getDefaultValues(user),
   });
-  const selectedRole = form.watch('role');
-  const schoolQuery = (form.watch('school') ?? '').trim();
-  const schoolMatches = useMemo(() => {
-    if (selectedRole !== 'coordinator' || schoolQuery.length === 0) {
-      return [];
-    }
-
-    const normalizedQuery = schoolQuery.toLowerCase();
-
-    return coordinatorSchoolSuggestions
-      .map((school) => {
-        const normalizedSchool = school.toLowerCase();
-        const startsWith = normalizedSchool.startsWith(normalizedQuery);
-        const includes = normalizedSchool.includes(normalizedQuery);
-        const score = startsWith ? 3 : includes ? 2 : 0;
-        return { school, score };
-      })
-      .filter((entry) => entry.score > 0)
-      .sort((a, b) => {
-        if (a.score !== b.score) {
-          return b.score - a.score;
-        }
-
-        return a.school.localeCompare(b.school);
-      })
-      .map((entry) => entry.school)
-      .slice(0, 5);
-  }, [schoolQuery, selectedRole]);
-  const closestSchool = schoolMatches[0] ?? null;
-  const closestMatchStart = closestSchool
-    ? closestSchool.toLowerCase().indexOf(schoolQuery.toLowerCase())
-    : -1;
 
   useEffect(() => {
     if (open) {
@@ -219,22 +223,21 @@ function UserDialog({
         }
       }}
     >
-      <DialogContent className="bg-bg-surface border-border-color text-text-primary sm:max-w-2xl">
+      <DialogContent className="bg-bg-surface border-border-color text-text-primary sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="font-mono text-2xl">
             {user ? 'Edit User' : 'Add User'}
           </DialogTitle>
           <DialogDescription className="text-text-muted">
-            Update the account profile, GitHub handle, role, and access status.
+            Manage account identity, role, and status for admin operations.
           </DialogDescription>
         </DialogHeader>
-
+        
         <Form {...form}>
           <form
             className="grid gap-4"
-            onSubmit={form.handleSubmit((values) => {
-              onSave(values);
-              form.reset(getDefaultValues(null));
+            onSubmit={form.handleSubmit(async (values) => {
+              await onSave(values);
             })}
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -320,86 +323,22 @@ function UserDialog({
               />
             </div>
 
-            {selectedRole === 'coordinator' && (
-              <div className="animate-in fade-in-0 slide-in-from-top-1 duration-200">
-                <FormField
-                  control={form.control}
-                  name="school"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Coordinator School</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="selection:bg-accent-primary/30 selection:text-text-primary focus-visible:ring-1 focus-visible:ring-accent-primary/40"
-                          autoComplete="off"
-                          placeholder="Mountain Ridge High School"
-                          onChange={(event) => {
-                            const nextValue = event.target.value;
-                            field.onChange(nextValue);
-
-                            const normalizedNextValue = nextValue.trim().toLowerCase();
-                            if (!normalizedNextValue) {
-                              return;
-                            }
-
-                            const startsWithMatch = coordinatorSchoolSuggestions.find((school) =>
-                              school.toLowerCase().startsWith(normalizedNextValue)
-                            );
-
-                            if (
-                              startsWithMatch &&
-                              startsWithMatch.toLowerCase() !== normalizedNextValue
-                            ) {
-                              const inputElement = event.currentTarget;
-                              form.setValue('school', startsWithMatch, {
-                                shouldDirty: true,
-                                shouldTouch: true,
-                                shouldValidate: true,
-                              });
-                              requestAnimationFrame(() => {
-                                inputElement.setSelectionRange(nextValue.length, startsWithMatch.length);
-                              });
-                            }
-                          }}
-                          onKeyDown={(event) => {
-                            if (
-                              event.key === 'Tab' &&
-                              closestSchool &&
-                              schoolQuery.length > 0 &&
-                              closestSchool.toLowerCase() !== schoolQuery.toLowerCase()
-                            ) {
-                              event.preventDefault();
-                              form.setValue('school', closestSchool, {
-                                shouldDirty: true,
-                                shouldTouch: true,
-                                shouldValidate: true,
-                              });
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
             <DialogFooter className="mt-2 gap-2 sm:gap-2">
               <Button
                 type="button"
                 variant="outline"
                 className="border-border-color bg-bg-surface text-text-primary hover:bg-bg-elevated"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 className="bg-accent-primary text-bg-base hover:bg-accent-secondary"
+                disabled={isSubmitting}
               >
-                {user ? 'Save Changes' : 'Create User'}
+                {isSubmitting ? 'Saving...' : user ? 'Save Changes' : 'Create User'}
               </Button>
             </DialogFooter>
           </form>
@@ -410,60 +349,86 @@ function UserDialog({
 }
 
 export default function AdminUserManagementPage() {
-  const [isMounted, setIsMounted] = useState(false);
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<UiUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UiUser | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const activeUsers = useMemo(() => users.filter((user) => user.status === 'active'), [users]);
+  const pendingUsers = useMemo(() => users.filter((user) => user.status === 'pending'), [users]);
+  const adminUsers = useMemo(() => users.filter((user) => user.role === 'admin'), [users]);
+
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const apiUsers = await getUsers();
+      setUsers(mapApiUsersToUiUsers(apiUsers));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load users');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setIsMounted(true);
+    void loadUsers();
   }, []);
-
-  if (!isMounted) {
-    return <div className="p-8 text-text-muted">Loading user management...</div>;
-  }
-
-  const activeUsers = users.filter((user) => user.status === 'active');
-  const pendingUsers = users.filter((user) => user.status === 'pending');
-  const adminUsers = users.filter((user) => user.role === 'admin');
 
   const openCreateDialog = () => {
     setEditingUser(null);
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (user: User) => {
+  const openEditDialog = (user: UiUser) => {
     setEditingUser(user);
     setIsDialogOpen(true);
   };
 
-  const handleSaveUser = (values: UserFormValues) => {
-    const nextUser: User = {
-      id: editingUser?.id ?? `user-${Date.now()}`,
-      name: values.name,
-      github: values.github,
-      role: values.role,
-      status: values.status,
-      joinedAt: editingUser?.joinedAt ?? new Date().toISOString().slice(0, 10),
-      avatarInitials: buildAvatarInitials(values.name),
-      organizationId: editingUser?.organizationId,
-    };
+  const handleSaveUser = async (values: UserFormValues) => {
+    try {
+      setIsSaving(true);
+      setError(null);
 
-    setUsers((currentUsers) => {
-      const existingIndex = currentUsers.findIndex((user) => user.id === nextUser.id);
+      if (editingUser) {
+        await updateUser(editingUser.id, {
+          name: values.name,
+          githubUsername: values.github,
+          role: values.role,
+          status: values.status,
+        });
+      } else {
+        const createdUser = await onboardUser({
+          githubUsername: values.github,
+          role:
+            values.role === 'team_lead'
+              ? 'coordinator'
+              : (values.role as Exclude<ApiUserRole, 'team_lead'>),
+        });
 
-      if (existingIndex === -1) {
-        return [nextUser, ...currentUsers];
+        await updateUser(createdUser.id, {
+          name: values.name,
+          githubUsername: values.github,
+          role: values.role,
+          status: values.status,
+        });
       }
 
-      const updatedUsers = [...currentUsers];
-      updatedUsers[existingIndex] = nextUser;
-      return updatedUsers;
-    });
-
-    setIsDialogOpen(false);
-    setEditingUser(null);
+      await loadUsers();
+      setIsDialogOpen(false);
+      setEditingUser(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save user');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-text-muted">Loading user management...</div>;
+  }
 
   return (
     <div className="p-8">
@@ -472,9 +437,7 @@ export default function AdminUserManagementPage() {
           <p className="text-sm font-mono uppercase tracking-[0.35em] text-accent-secondary">
             Admin Console
           </p>
-          <h1 className="mt-2 text-4xl font-mono font-bold text-text-primary">
-            User Management
-          </h1>
+          <h1 className="mt-2 text-4xl font-mono font-bold text-text-primary">User Management</h1>
           <p className="mt-3 max-w-2xl text-text-muted">
             Manage every KODA account from one place. Add new users, edit roles,
             and keep access status in sync with the team structure.
@@ -489,28 +452,25 @@ export default function AdminUserManagementPage() {
           >
             <Link href="/admin/dashboard">View Dashboard</Link>
           </Button>
-          <Button
-            onClick={openCreateDialog}
-            className="bg-accent-primary text-bg-base hover:bg-accent-secondary"
-          >
+          <Button onClick={openCreateDialog} className="bg-accent-primary text-bg-base hover:bg-accent-secondary">
             <Plus className="mr-2 h-4 w-4" />
             Add User
           </Button>
         </div>
       </div>
 
+      {error && (
+        <Card className="mb-6 border-red-500/30 bg-red-500/5 p-4 text-sm text-red-300">{error}</Card>
+      )}
+
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card className="bg-bg-surface border-border-color p-5 card-glow">
           <p className="text-sm text-text-muted">Total Users</p>
-          <p className="mt-2 text-3xl font-mono font-bold text-text-primary">
-            {users.length}
-          </p>
+          <p className="mt-2 text-3xl font-mono font-bold text-text-primary">{users.length}</p>
         </Card>
         <Card className="bg-bg-surface border-border-color p-5 card-glow">
           <p className="text-sm text-text-muted">Active</p>
-          <p className="mt-2 text-3xl font-mono font-bold text-text-primary">
-            {activeUsers.length}
-          </p>
+          <p className="mt-2 text-3xl font-mono font-bold text-text-primary">{activeUsers.length}</p>
         </Card>
         <Card className="bg-bg-surface border-border-color p-5 card-glow">
           <p className="text-sm text-text-muted">Pending / Admins</p>
@@ -523,16 +483,10 @@ export default function AdminUserManagementPage() {
       <Card className="overflow-hidden border-border-color bg-bg-surface">
         <div className="flex flex-col gap-2 border-b border-border-color px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-mono font-semibold text-text-primary">
-              Directory
-            </h2>
-            <p className="text-sm text-text-muted">
-              Click Edit on any row to open the add/edit dialog.
-            </p>
+            <h2 className="text-xl font-mono font-semibold text-text-primary">Directory</h2>
+            <p className="text-sm text-text-muted">Click Edit on any row to open the add/edit dialog.</p>
           </div>
-          <p className="text-xs font-mono uppercase tracking-[0.3em] text-text-muted">
-            {users.length} records
-          </p>
+          <p className="text-xs font-mono uppercase tracking-[0.3em] text-text-muted">{users.length} records</p>
         </div>
 
         <Table>
@@ -555,9 +509,7 @@ export default function AdminUserManagementPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-text-primary">
-                        {user.name}
-                      </p>
+                      <p className="truncate text-sm font-semibold text-text-primary">{user.name}</p>
                       <Button
                         type="button"
                         variant="ghost"
@@ -587,10 +539,7 @@ export default function AdminUserManagementPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={getStatusBadgeVariant(user.status)}
-                  >
+                  <Badge variant="outline" className={getStatusBadgeVariant(user.status)}>
                     {formatStatusLabel(user.status)}
                   </Badge>
                 </TableCell>
@@ -603,6 +552,7 @@ export default function AdminUserManagementPage() {
       <UserDialog
         open={isDialogOpen}
         user={editingUser}
+        isSubmitting={isSaving}
         onOpenChange={(nextOpen) => {
           setIsDialogOpen(nextOpen);
           if (!nextOpen) {
