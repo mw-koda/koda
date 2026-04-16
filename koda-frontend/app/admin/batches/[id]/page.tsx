@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users } from 'lucide-react';
+import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users, Plus } from 'lucide-react'; // Added Plus icon
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { batchCatalog, getAttendanceLogsByDate, interns, type BatchCatalogEntry } from '@/lib/mock-data';
-import { slugifyTeamName } from '@/lib/team-utils';
+import { batchesApi, type BatchDetail } from '@/lib/api/batches';
+import CreateTeamModal from '../create-team-modal/modal'; // Adjust path based on your folder structure
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -20,15 +20,6 @@ function formatDate(date: string) {
 function getDaysRemaining(endDate: string) {
   const differenceInMs = new Date(endDate).getTime() - Date.now();
   return Math.max(Math.ceil(differenceInMs / (1000 * 60 * 60 * 24)), 0);
-}
-
-function getTeamProgress(scores: number[]) {
-  if (scores.length === 0) {
-    return 0;
-  }
-
-  const total = scores.reduce((sum, score) => sum + score, 0);
-  return Math.round(total / scores.length);
 }
 
 function BatchNotFound() {
@@ -44,7 +35,7 @@ function BatchNotFound() {
               Batch not found
             </CardTitle>
             <CardDescription className="mx-auto max-w-md text-text-muted">
-              The batch you requested does not exist in the current mock dataset.
+              The batch you requested could not be loaded.
             </CardDescription>
           </div>
         </CardHeader>
@@ -60,44 +51,53 @@ function BatchNotFound() {
 
 export default function BatchDetailsPage({ params }: { params: { id: string } }) {
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  );
-  const attendanceLogs = useMemo(
-    () => getAttendanceLogsByDate(selectedDate),
-    [selectedDate]
-  );
+  const [batch, setBatch] = useState<BatchDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // 1. Add State for the Modal
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const loadBatch = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await batchesApi.findOne(params.id);
+        setBatch(data);
+      } catch (requestError) {
+        setBatch(null);
+        setError(requestError instanceof Error ? requestError.message : 'Failed to load batch details.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadBatch();
+  }, [isMounted, params.id]);
+
+  // 2. Add Success Handler
+  const handleTeamCreated = (payload: any) => {
+    console.log("Team created for batch:", params.id, payload);
+    // You can trigger a refetch here if you have a teams list to update
+  };
+
+  if (!isMounted || isLoading) {
     return <div className="p-8 text-text-muted">Loading batch details...</div>;
   }
 
-  const batch = batchCatalog.find((entry) => entry.id === params.id);
-
-  if (!batch) {
+  if (error || !batch) {
     return <BatchNotFound />;
   }
 
   const daysRemaining = getDaysRemaining(batch.endDate);
-  const presentCount = new Set(attendanceLogs.map((log) => log.internId)).size;
-  const totalInterns = interns.length;
-  const absentCount = Math.max(totalInterns - presentCount, 0);
-  const teamMap = interns.reduce((acc, intern) => {
-    const entry = acc.get(intern.team) || { name: intern.team, internCount: 0, scores: [] as number[] };
-    entry.internCount += 1;
-    entry.scores.push(intern.score);
-    acc.set(intern.team, entry);
-    return acc;
-  }, new Map<string, { name: string; internCount: number; scores: number[] }>());
-  const teamSummaries = Array.from(teamMap.values()).map((team) => ({
-    name: team.name,
-    internCount: team.internCount,
-    progress: getTeamProgress(team.scores),
-  }));
+  const totalInterns = batch.assignedInterns.length;
 
   return (
     <div className="p-8 space-y-8">
@@ -114,12 +114,23 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           </p>
         </div>
 
-        <Button asChild variant="ghost" className="text-text-primary hover:bg-bg-elevated hover:text-text-primary">
-          <Link href="/admin/batches">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Batches
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* 3. Add Team Button */}
+          <Button 
+            onClick={() => setIsTeamModalOpen(true)}
+            className="bg-accent-primary hover:bg-accent-secondary text-white gap-2 px-6"
+          >
+            <Plus className="h-4 w-4" />
+            Add Team
+          </Button>
+
+          <Button asChild variant="ghost" className="text-text-primary hover:bg-bg-elevated hover:text-text-primary">
+            <Link href="/admin/batches">
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back to Batches
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -142,37 +153,22 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           </CardHeader>
         </Card>
 
-        <Link href={`/admin/live-attendance?batchId=${batch.id}`} className="block h-full">
-          <Card className="card-glow border-border-color bg-bg-surface h-full transition-colors hover:border-accent-primary/40 hover:bg-bg-elevated/50">
+        <Card className="card-glow border-border-color bg-bg-surface h-full transition-colors hover:border-accent-primary/40 hover:bg-bg-elevated/50">
           <CardHeader className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-sm font-medium uppercase tracking-[0.24em] text-text-muted">
-                Live Attendance
+                Assigned Interns
               </CardTitle>  
               <Users className="h-5 w-5 text-accent-primary" />
             </div>
-            <div className="flex items-end gap-3">
+            <div className="space-y-2">
               <span className="font-display text-4xl font-bold text-text-primary">
-              {presentCount}
+                {totalInterns}
               </span>
-              <span className="pb-1 text-2xl text-text-muted">/</span>
-              <span className="pb-1 text-2xl text-text-muted">{totalInterns}</span>
-              <span className="ml-2 pb-1 text-sm text-text-muted">(Absent: {absentCount})</span>
+              <p className="text-sm text-text-muted">interns assigned to this batch</p>
             </div>
           </CardHeader>
-          <CardContent>
-            <label className="block text-xs font-semibold uppercase tracking-[0.24em] text-text-muted mb-2">
-              Attendance date
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              className="w-full bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
-            />
-          </CardContent>
-          </Card>
-        </Link>
+        </Card>
 
         <Card className="card-glow border-border-color bg-bg-surface">
           <CardHeader className="space-y-3">
@@ -194,53 +190,59 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="space-y-2">
               <CardTitle className="text-xl font-display text-text-primary">
-                Teams in this batch
+                Assigned Interns
               </CardTitle>
               <CardDescription className="text-text-muted">
-                Current team distribution and progress overview for this cohort.
+                View all interns assigned to this batch.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {teamSummaries.length === 0 ? (
+          {totalInterns === 0 ? (
             <div className="rounded-xl border border-border-color bg-bg-elevated p-6 text-text-muted">
-              No teams are assigned to this batch yet.
+              No interns are assigned to this batch yet.
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {teamSummaries.map((team) => {
-                const teamSlug = slugifyTeamName(team.name);
-
-                return (
-                  <Link
-                    key={team.name}
-                    href={`/admin/teams/${teamSlug}/dashboard`}
-                    className="group"
-                  >
-                    <div className="rounded-xl border border-border-color bg-bg-elevated p-5 transition-colors group-hover:border-accent-primary/40 group-hover:bg-bg-surface">
-                      <div className="space-y-2">
-                        <p className="text-lg font-semibold text-text-primary">
-                          {team.name}
-                        </p>
+            <div className="space-y-3">
+              {batch.assignedInterns.map((intern) => (
+                <div
+                  key={intern.id}
+                  className="rounded-lg border border-border-color bg-bg-elevated p-4 hover:border-accent-primary/40 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-text-primary">
+                        {intern.name || 'Unnamed Intern'}
+                      </p>
+                      <p className="text-sm text-text-muted">
+                        {intern.email || 'No email'}
+                      </p>
+                      {intern.githubUsername && (
                         <p className="text-sm text-text-muted">
-                          {team.internCount} interns | Overall Project Progress
+                          @{intern.githubUsername}
                         </p>
-                      </div>
-                      <div className="mt-4 space-y-2">
-                        <Progress value={team.progress} className="h-2.5 rounded-full bg-bg-surface" />
-                        <p className="text-xs text-text-muted">
-                          {team.progress}% complete
-                        </p>
-                      </div>
+                      )}
                     </div>
-                  </Link>
-                );
-              })}
+                    <div className="text-right text-sm text-text-muted">
+                      {intern.assignedAt && (
+                        <p>Assigned {formatDate(intern.assignedAt)}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* 4. Render the Modal */}
+      <CreateTeamModal 
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
+        onSuccess={handleTeamCreated}
+      />
     </div>
   );
 }

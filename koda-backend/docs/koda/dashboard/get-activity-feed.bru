@@ -1,0 +1,23 @@
+meta {
+  name: Get Dashboard Activity Feed
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/dashboard/activity
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+params:query {
+  ~teamId: {{teamId}}
+}
+
+settings {
+  encodeUrl: true
+}

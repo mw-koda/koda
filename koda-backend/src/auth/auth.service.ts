@@ -7,10 +7,12 @@ import { JwtService } from '@nestjs/jwt';
 import type { PostgrestMaybeSingleResponse } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { Role } from '../common/enums/role.enum';
+import { USER_SELECT_FIELDS } from './users/user-select';
 
 interface GithubUser {
   githubId: string;
   username: string;
+  name: string | null;
   email: string | null;
   avatarUrl: string | null;
   accessToken: string;
@@ -20,6 +22,7 @@ export interface UserRecord {
   id: string;
   github_id: string;
   github_username: string;
+  name: string | null;
   email: string | null;
   avatar_url: string | null;
   role: Role;
@@ -58,9 +61,7 @@ export class AuthService {
     const client = this.supabaseService.getClient();
     const existingResponse = (await client
       .from('users')
-      .select(
-        'id, github_id, github_username, email, avatar_url, role, is_onboarded, created_at, updated_at',
-      )
+      .select(USER_SELECT_FIELDS)
       .eq('github_id', githubUser.githubId)
       .maybeSingle()) as PostgrestMaybeSingleResponse<UserRecord>;
 
@@ -73,15 +74,80 @@ export class AuthService {
     }
 
     if (existingResponse.data !== null) {
+      const updateResponse = await client
+        .from('users')
+        .update({
+          github_username: githubUser.username,
+          name: existingResponse.data.name ?? githubUser.name ?? githubUser.username,
+          email: githubUser.email,
+          avatar_url: githubUser.avatarUrl,
+          is_onboarded: true,
+        })
+        .eq('id', existingResponse.data.id)
+        .select(USER_SELECT_FIELDS)
+        .single();
+
+      if (updateResponse.error !== null || updateResponse.data === null) {
+        this.logger.error(
+          'Failed to update existing user from GitHub login',
+          updateResponse.error?.message,
+        );
+        throw new InternalServerErrorException('Failed to update user');
+      }
+
       this.logger.log(
-        `Existing user logged in: ${existingResponse.data.github_username}`,
+        `Existing user logged in: ${updateResponse.data.github_username}`,
       );
-      return existingResponse.data;
+      return updateResponse.data;
+    }
+
+    const usernameResponse = (await client
+      .from('users')
+      .select(USER_SELECT_FIELDS)
+      .eq('github_username', githubUser.username)
+      .maybeSingle()) as PostgrestMaybeSingleResponse<UserRecord>;
+
+    if (usernameResponse.error !== null) {
+      this.logger.error(
+        'Failed to fetch username-matched user from Supabase',
+        usernameResponse.error.message,
+      );
+      throw new InternalServerErrorException('Failed to fetch existing user');
+    }
+
+    if (usernameResponse.data !== null) {
+      const updateResponse = await client
+        .from('users')
+        .update({
+          github_id: githubUser.githubId,
+          github_username: githubUser.username,
+          name: usernameResponse.data.name ?? githubUser.name ?? githubUser.username,
+          email: githubUser.email,
+          avatar_url: githubUser.avatarUrl,
+          is_onboarded: true,
+        })
+        .eq('id', usernameResponse.data.id)
+        .select(USER_SELECT_FIELDS)
+        .single();
+
+      if (updateResponse.error !== null || updateResponse.data === null) {
+        this.logger.error(
+          'Failed to attach GitHub identity to onboarded user',
+          updateResponse.error?.message,
+        );
+        throw new InternalServerErrorException('Failed to update user');
+      }
+
+      this.logger.log(
+        `Existing user matched by username: ${updateResponse.data.github_username}`,
+      );
+      return updateResponse.data;
     }
 
     const newUser: NewUserInsert = {
       github_id: githubUser.githubId,
       github_username: githubUser.username,
+      name: githubUser.name ?? githubUser.username,
       email: githubUser.email,
       avatar_url: githubUser.avatarUrl,
       role: Role.INTERN,
@@ -93,9 +159,7 @@ export class AuthService {
     const createResponse = await client
       .from('users')
       .insert(newUser)
-      .select(
-        'id, github_id, github_username, email, avatar_url, role, is_onboarded, created_at, updated_at',
-      )
+      .select(USER_SELECT_FIELDS)
       .single();
 
     if (createResponse.error !== null || createResponse.data === null) {

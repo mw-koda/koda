@@ -12,12 +12,8 @@ export default function LoginLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <main className="min-h-screen">
-          {children}
-        </main>
-      </body>
-    </html>
+    <>
+      {children}
+    </>
   );
 }

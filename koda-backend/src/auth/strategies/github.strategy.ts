@@ -8,6 +8,7 @@ import type { UserRecord } from '../auth.service';
 interface GithubUser {
   githubId: string;
   username: string;
+  name: string | null;
   email: string | null;
   avatarUrl: string | null;
   accessToken: string;
@@ -41,6 +42,7 @@ export class GithubStrategy extends GithubPassportStrategy {
     const githubUser: GithubUser = {
       githubId: id,
       username: username ?? '',
+      name: profile.displayName?.trim() || null,
       // emails / photos come from passport-github2 as optional arrays of
       // objects; value is always a string when present, so the cast is safe.
       email: emails?.[0]?.value ?? null,

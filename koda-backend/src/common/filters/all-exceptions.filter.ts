@@ -22,10 +22,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
-      exception instanceof HttpException
-        ? exception.message
-        : 'Internal server error';
+    let message: string | string[] = 'Internal server error';
+    let error: string | undefined;
+
+    if (exception instanceof HttpException) {
+      const responseBody = exception.getResponse();
+
+      if (typeof responseBody === 'string') {
+        message = responseBody;
+      } else if (typeof responseBody === 'object' && responseBody !== null) {
+        const responseObject = responseBody as {
+          message?: string | string[];
+          error?: string;
+        };
+
+        message = responseObject.message ?? exception.message;
+        error = responseObject.error;
+      } else {
+        message = exception.message;
+      }
+    }
 
     this.logger.error(
       `HTTP ${status} Error: ${message}`,
@@ -37,6 +53,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       message,
+      error,
     });
   }
 }

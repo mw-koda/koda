@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { roleRedirects, type UserRole } from '@/lib/mock-data';
-import { useState, useEffect } from 'react';
+import { roleRedirects } from '@/lib/role-redirects';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { auth } from '@/lib/auth';
 
 const adminNavigation = [
   { name: 'User Management', href: '/admin', icon: ShieldCheck },
@@ -34,22 +35,17 @@ function isAdminNavItemActive(pathname: string, href: string) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [isMounted, setIsMounted] = useState(false);
-  const [currentRole, setCurrentRole] = useState<string>('coordinator');
+  const { user, isLoading } = useCurrentUser();
+  const normalizedRole = user?.role === 'team_lead' ? 'coordinator' : user?.role;
+  const currentRole = normalizedRole ?? 'coordinator';
 
-  useEffect(() => {
-    setIsMounted(true);
-    const selectedRole = localStorage.getItem('selectedRole') || 'coordinator';
-    setCurrentRole(selectedRole);
-  }, []);
-
-  if (!isMounted) {
+  if (isLoading) {
     return (
       <div className="fixed left-0 top-0 h-screen w-60 bg-bg-surface border-r border-border-color" />
     );
   }
 
-  const dashboardHref = roleRedirects[currentRole as UserRole] || '/login';
+  const dashboardHref = roleRedirects[currentRole] || '/login';
   const isDashboardRoute = pathname === dashboardHref || pathname.startsWith(dashboardHref + '/');
   const isIntern = currentRole === 'intern';
   const isAdmin = currentRole === 'admin';
@@ -75,7 +71,6 @@ export function Sidebar() {
         : [
             { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
             managementItem,
-            { name: 'Reports & Performance', href: '/coordinator/reports-and-perfromance', icon: ClipboardList },
             { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
           ];
 
@@ -221,8 +216,8 @@ export function Sidebar() {
       <div className="p-4 border-t border-border-color">
         <button 
           onClick={() => {
-            localStorage.removeItem('selectedRole');
-            window.location.href = '/login';
+              auth.removeToken();
+              window.location.href = '/login';
           }}
           className="flex items-center px-3 py-2.5 text-sm font-medium rounded-md text-text-muted hover:text-text-primary hover:bg-bg-elevated/50 transition-colors w-full"
         >

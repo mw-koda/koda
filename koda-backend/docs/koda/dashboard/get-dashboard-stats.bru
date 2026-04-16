@@ -1,0 +1,23 @@
+meta {
+  name: Get Dashboard Stats
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/dashboard/stats
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+params:query {
+  ~teamId: {{teamId}}
+}
+
+settings {
+  encodeUrl: true
+}

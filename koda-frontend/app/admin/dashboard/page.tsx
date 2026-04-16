@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AlertCircle } from 'lucide-react'; // Added for error state
 import * as mockData from '@/lib/mock-data';
-import AdminOnboardingView from './onboarding-view';
-
+import { batchesApi, BatchSummary } from '@/lib/api/batches'; // Import the API
+import AdminOnboardingView from '../batches/onboarding-modal/onboarding-view';
 
 function getUserStatusClass(status: string) {
   switch (status) {
@@ -23,22 +24,47 @@ function getUserStatusClass(status: string) {
 
 export default function AdminDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
+  const [batches, setBatches] = useState<BatchSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
-    return <div className="p-8 text-text-muted">Loading dashboard...</div>;
+  // Fetch data logic moved from BatchesPage
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await batchesApi.findAll();
+        setBatches(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [isMounted]);
+
+  if (!isMounted || isLoading) {
+    return (
+      <div className="p-8 flex items-center gap-3 text-text-muted font-mono">
+        <div className="animate-spin rounded-full h-4 w-4 border-2 border-accent-primary/20 border-t-accent-primary" />
+        Initializing KODA Dashboard...
+      </div>
+    );
   }
 
-  const batches = mockData.batches ?? [];
-  const users = mockData.users;
-
+  // Users are still coming from mockData for now
+  const users = mockData.users ?? [];
   const showOnboarding = batches.length === 0;
-  if(showOnboarding) {
-    return <AdminOnboardingView />;
-  } 
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -49,7 +75,6 @@ export default function AdminDashboardPage() {
 
   const activeUsers = users.filter((user) => user.status === 'active');
   const pendingUsers = users.filter((user) => user.status === 'pending');
-  const adminUsers = users.filter((user) => user.role === 'admin');
   const interns = users.filter((user) => user.role === 'intern');
 
   const newestUsers = [...users]
@@ -63,6 +88,13 @@ export default function AdminDashboardPage() {
           Admin Dashboard
         </h1>
         <p className="text-text-muted">{today}</p>
+        
+        {error && (
+          <div className="mt-4 flex gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-500 text-sm">
+            <AlertCircle className="h-4 w-4" />
+            {error}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -134,6 +166,11 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </Card>
+
+      {/* Onboarding Modal triggers if batches.length is 0. 
+         Wait for isLoading to be false before showing to avoid "pop-in" 
+      */}
+      {!isLoading && <AdminOnboardingView isOpen={showOnboarding} />}
     </div>
   );
 }
