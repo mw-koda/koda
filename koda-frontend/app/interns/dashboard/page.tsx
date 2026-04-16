@@ -1,23 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { getAttendanceByInternId, interns, issues, reports } from '@/lib/mock-data';
 import {
-  TrendingUp,
-  TrendingDown,
-  Users,
-  FileText,
-  GitPullRequest,
-  
+    FileText,
+    GitPullRequest,
+    TrendingDown,
+    TrendingUp,
+    Users,
 } from 'lucide-react';
-import { interns, issues, reports, mockAuthConfig, getAttendanceByInternId } from '@/lib/mock-data';
-import { JoinOrganizationCard } from '@/components/join-organization-card';
 import Link from 'next/link';
-
-// --- ADDED IMPORT ---
-import JoinTeamModal from '../../admin/batches/join-team-modal/modal';
 
 function StatCard({
   title,
@@ -110,24 +104,6 @@ function formatDuration(totalMinutes: number) {
 }
 
 export default function InternDashboardPage() {
-  const [currentRole, setCurrentRole] = useState<string>(mockAuthConfig.role);
-  const [userOrganizationId, setUserOrganizationId] = useState<string | undefined>(mockAuthConfig.organizationId);
-  
-  // --- ADDED STATE FOR MODAL ---
-  const [showJoinModal, setShowJoinModal] = useState(false);
-
-  useEffect(() => {
-    const role = localStorage.getItem('selectedRole') || mockAuthConfig.role;
-    const orgId = localStorage.getItem('userOrganizationId') || mockAuthConfig.organizationId;
-    setCurrentRole(role);
-    setUserOrganizationId(orgId || undefined);
-
-    // --- LOGIC: Trigger modal if intern is unassigned ---
-    if (role === 'intern' && !orgId) {
-      setShowJoinModal(true);
-    }
-  }, []);
-
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -155,12 +131,6 @@ export default function InternDashboardPage() {
       {currentRole === 'intern' && (
         <JoinOrganizationCard currentOrganizationId={userOrganizationId} />
       )} */}
-
-      {/* --- ADDED MODAL COMPONENT --- */}
-      <JoinTeamModal 
-        isOpen={showJoinModal} 
-        onClose={() => setShowJoinModal(false)} 
-      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
