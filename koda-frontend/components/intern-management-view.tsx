@@ -1,10 +1,10 @@
 'use client';
  
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { interns, getReportsByInternId } from '@/lib/mock-data';
+import { Card } from '@/components/ui/card';
+import { getReportsByInternId, interns } from '@/lib/mock-data';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
  
 type ReportStatusFilter = 'all' | 'submitted' | 'pending' | 'reviewed';
  
@@ -13,6 +13,11 @@ type InternManagementViewProps = {
   title?: string;
   subtitle?: string;
   teamFilter?: string;
+  showAssignedPeriod?: boolean;
+  showReportStatus?: boolean;
+  coordinatorScoped?: boolean;
+  coordinatorSchoolFilter?: string;
+  coordinatorBatchIdFilter?: string;
 };
  
 function getReportStatusClass(status: string) {
@@ -44,13 +49,35 @@ export default function InternManagementView({
   title = 'Intern Management',
   subtitle = 'Manage and monitor intern progress and performance',
   teamFilter,
+  showAssignedPeriod = false,
+  showReportStatus = true,
+  coordinatorScoped = false,
+  coordinatorSchoolFilter,
+  coordinatorBatchIdFilter,
 }: InternManagementViewProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReportStatusFilter>('all');
- 
-  const availableInterns = teamFilter
-    ? interns.filter((intern) => intern.team === teamFilter)
-    : interns;
+
+  const availableInterns = useMemo(() => {
+    const teamScopedInterns = teamFilter
+      ? interns.filter((intern) => intern.team === teamFilter)
+      : interns;
+
+    if (!coordinatorScoped) {
+      return teamScopedInterns;
+    }
+
+    return teamScopedInterns.filter((intern) => {
+      const matchesSchool = coordinatorSchoolFilter
+        ? intern.school === coordinatorSchoolFilter
+        : true;
+      const matchesBatch = coordinatorBatchIdFilter
+        ? intern.organizationId === coordinatorBatchIdFilter
+        : true;
+
+      return matchesSchool && matchesBatch;
+    });
+  }, [coordinatorBatchIdFilter, coordinatorSchoolFilter, coordinatorScoped, teamFilter]);
  
   const filtered = useMemo(() => {
     return availableInterns.filter((intern) => {
@@ -134,12 +161,19 @@ export default function InternManagementView({
                 <th className="text-left px-6 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
                   GitHub
                 </th>
+                {showAssignedPeriod ? (
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
+                    Assigned Period
+                  </th>
+                ) : null}
                 <th className="text-left px-6 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
                   Recent Report Type
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
-                  Report Status
-                </th>
+                {showReportStatus ? (
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
+                    Report Status
+                  </th>
+                ) : null}
                 <th className="text-left px-6 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">
                   Issues
                 </th>
@@ -176,6 +210,12 @@ export default function InternManagementView({
                           @{intern.github}
                         </span>
                       </td>
+
+                      {showAssignedPeriod ? (
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-text-primary">{intern.assignedPeriod}</span>
+                        </td>
+                      ) : null}
  
                       {/* Recent Report Type */}
                       <td className="px-6 py-4">
@@ -197,18 +237,20 @@ export default function InternManagementView({
                       </td>
  
                       {/* Report Status */}
-                      <td className="px-6 py-4">
-                        {latestReport ? (
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${getReportStatusClass(latestReport.status)}`}
-                          >
-                            {latestReport.status}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-text-muted">—</span>
-                        )}
-                      </td>
+                      {showReportStatus ? (
+                        <td className="px-6 py-4">
+                          {latestReport ? (
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${getReportStatusClass(latestReport.status)}`}
+                            >
+                              {latestReport.status}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-text-muted">—</span>
+                          )}
+                        </td>
+                      ) : null}
  
                       {/* Issues */}
                       <td className="px-6 py-4">
@@ -251,7 +293,7 @@ export default function InternManagementView({
               ) : (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={showAssignedPeriod && showReportStatus ? 7 : showAssignedPeriod || showReportStatus ? 6 : 5}
                     className="px-6 py-12 text-center text-sm text-text-muted"
                   >
                     No interns found matching your search.

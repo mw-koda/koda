@@ -1,20 +1,33 @@
 'use client';
- 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Card } from '@/components/ui/card';
+
+import JoinBatchGatekeeperModal from '@/components/join-batch-gatekeeper-modal';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { interns, issues, reports, attendanceLogs, getAttendanceByInternId } from '@/lib/mock-data';
+import { Card } from '@/components/ui/card';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { attendanceLogs, getAttendanceByInternId, interns, issues } from '@/lib/mock-data';
 import {
-  Users,
-  FileText,
-  GitPullRequest,
-  Target,
-  TrendingUp,
-  TrendingDown,
-  Clock,
+    Clock,
+    FileText,
+    GitPullRequest,
+    TrendingDown,
+    TrendingUp,
+    Users
 } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+ 
+function getReportStatusClass(status: string) {
+  switch (status) {
+    case 'submitted':
+      return 'bg-accent-warning/10 text-accent-warning border-accent-warning/30';
+    case 'reviewed':
+      return 'bg-accent-primary/10 text-accent-primary border-accent-primary/30';
+    case 'pending':
+      return 'bg-text-muted/10 text-text-muted border-text-muted/30';
+    default:
+      return 'bg-text-muted/10 text-text-muted border-text-muted/30';
+  }
+}
  
 function getIssueStatusClass(status: string) {
   switch (status) {
@@ -67,12 +80,39 @@ function timeAgo(dateStr: string) {
  
 export default function CoordinatorDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
+  const [persistedSchool, setPersistedSchool] = useState<string | null>(null);
+  const [hasBatchAssignment, setHasBatchAssignment] = useState(false);
+  const { user, isLoading } = useCurrentUser();
  
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted || isLoading) {
+      return;
+    }
+
+    const localSchool = localStorage.getItem('userSchool');
+    const localBatchId = localStorage.getItem('userBatchId');
+    const assignedBatchId = user?.batchId ?? user?.batch_id ?? localBatchId;
+
+    setPersistedSchool(localSchool);
+    setHasBatchAssignment(Boolean(assignedBatchId));
+  }, [isLoading, isMounted, user]);
+
+  const school = useMemo(() => {
+    return user?.school ?? user?.school_name ?? persistedSchool ?? 'School not assigned';
+  }, [persistedSchool, user]);
+
+  const handleJoinBatch = async ({ batchCode, school: schoolName }: { batchCode: string; school: string }) => {
+    localStorage.setItem('userBatchId', batchCode.trim());
+    localStorage.setItem('userSchool', schoolName.trim());
+    setPersistedSchool(schoolName.trim());
+    setHasBatchAssignment(true);
+  };
  
-  if (!isMounted) {
+  if (!isMounted || isLoading) {
     return <div className="p-8 text-text-muted">Loading dashboard...</div>;
   }
  
@@ -83,26 +123,10 @@ export default function CoordinatorDashboardPage() {
     day: 'numeric',
   });
  
-  const school = 'Cebu Institute of Technology University'; // Replace with actual school data
-  const schoolInterns = interns.filter((intern) => intern.school === school);
   const pendingReports = interns.filter((i) => i.reportStatus === 'pending');
   const openIssues = issues.filter((i) => i.status === 'open');
   const avgScore = Math.round(
     interns.reduce((sum, i) => sum + i.score, 0) / interns.length
-  );
-
-  const latestReportByIntern = reports.reduce<Record<string, (typeof reports)[number]>>(
-    (acc, report) => {
-      const existing = acc[report.internId];
-      if (
-        !existing ||
-        new Date(report.submittedAt).getTime() > new Date(existing.submittedAt).getTime()
-      ) {
-        acc[report.internId] = report;
-      }
-      return acc;
-    },
-    {}
   );
  
   const recentIssues = [...issues]
@@ -127,6 +151,11 @@ export default function CoordinatorDashboardPage() {
  
   return (
     <div className="p-8">
+      <JoinBatchGatekeeperModal
+        isOpen={!hasBatchAssignment}
+        roleLabel="Coordinator"
+        onJoin={handleJoinBatch}
+      />
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
@@ -324,47 +353,35 @@ export default function CoordinatorDashboardPage() {
           Intern Status Summary
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {schoolInterns.map((intern) => {
-            const latestReport = latestReportByIntern[intern.id];
-
-            return (
-              <Link key={intern.id} href={`/coordinator/intern/${intern.id}`}>
-                <div className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/50 transition-all card-glow cursor-pointer">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
-                      <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
-                        {intern.avatarInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-text-primary truncate">
-                        {intern.name}
-                      </h3>
-                      <p className="text-xs text-text-muted mb-2">{intern.role}</p>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${
-                            latestReport?.status === 'reviewed'
-                              ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
-                              : latestReport?.status === 'pending'
-                                ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
-                                : 'bg-text-muted/10 text-text-muted border-text-muted/30'
-                          }`}
-                        >
-                          {latestReport?.status ?? 'no report'}
-                        </Badge>
-                        <span className="text-xs text-text-muted font-mono capitalize">
-                          {latestReport ? `${latestReport.type} report` : 'No recent report'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-text-muted">{intern.lastActive}</p>
-                    </div>
-                  </div>
+          {interns.map((intern) => (
+            <Link
+              key={intern.id}
+              href={`/coordinator/intern/${intern.id}`}
+              className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/40 transition-colors block"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent-primary/20 border border-accent-primary/40 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-mono font-bold text-accent-primary">
+                    {intern.avatarInitials}
+                  </span>
                 </div>
-              </Link>
-            );
-          })}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-text-primary">{intern.name}</p>
+                  <p className="text-xs text-text-muted mb-2">{intern.role}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${getReportStatusClass(intern.reportStatus)}`}
+                    >
+                      {intern.reportStatus}
+                    </Badge>
+                    <span className="text-xs text-text-muted">{intern.score}%</span>
+                  </div>
+                  <p className="text-xs text-text-muted">{intern.lastActive}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </Card>
     </div>

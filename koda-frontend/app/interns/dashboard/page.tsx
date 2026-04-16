@@ -1,30 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { getAttendanceByInternId, interns, issues, reports } from '@/lib/mock-data';
 import {
-  TrendingUp,
-  TrendingDown,
-  Users,
-  FileText,
-  GitPullRequest,
-  
+    FileText,
+    GitPullRequest,
+    TrendingDown,
+    TrendingUp,
+    Users,
 } from 'lucide-react';
-import {
-  interns,
-  issues,
-  reports,
-  mockAuthConfig,
-  getAttendanceByInternId,
-  roleToUserMap,
-} from '@/lib/mock-data';
-import { JoinOrganizationCard } from '@/components/join-organization-card';
 import Link from 'next/link';
-
-// --- ADDED IMPORT ---
-import JoinTeamModal from '../../admin/batches/join-team-modal/modal';
 
 function StatCard({
   title,
@@ -43,25 +30,25 @@ function StatCard({
     <Card className="bg-bg-surface border-border-color p-6 card-glow">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-            {title}
-          </p>
-          <p className="text-4xl font-mono font-bold text-text-primary mb-2">
+          <p className="text-label text-text-muted mb-2">{title}</p>
+          <p className="text-3xl font-mono font-bold text-text-primary mb-1">
             {value}
           </p>
-          <p
-            className={`text-xs flex items-center gap-1 ${trend === 'up' ? 'text-accent-primary' : 'text-red-400'}`}
-          >
+          <div className="flex items-center gap-1">
             {trend === 'up' ? (
-              <TrendingUp className="w-3 h-3" />
+              <TrendingUp className="h-3 w-3 text-accent-primary" />
             ) : (
-              <TrendingDown className="w-3 h-3" />
+              <TrendingDown className="h-3 w-3 text-accent-danger" />
             )}
-            {change}
-          </p>
+            <span
+              className={`text-xs ${trend === 'up' ? 'text-accent-primary' : 'text-accent-danger'}`}
+            >
+              {change}
+            </span>
+          </div>
         </div>
-        <div className="p-2 bg-accent-primary/10 rounded-lg">
-          <Icon className="w-6 h-6 text-accent-primary" />
+        <div className="p-3 bg-bg-elevated rounded-lg">
+          <Icon className="h-6 w-6 text-accent-primary" />
         </div>
       </div>
     </Card>
@@ -117,31 +104,6 @@ function formatDuration(totalMinutes: number) {
 }
 
 export default function InternDashboardPage() {
-  const [currentRole, setCurrentRole] = useState<string>(mockAuthConfig.role);
-  const [userOrganizationId, setUserOrganizationId] = useState<string | undefined>(mockAuthConfig.organizationId);
-  
-  // --- ADDED STATE FOR MODAL ---
-  const [showJoinModal, setShowJoinModal] = useState(false);
-
-  useEffect(() => {
-    const role = localStorage.getItem('selectedRole') || mockAuthConfig.role;
-    const orgId = localStorage.getItem('userOrganizationId') || mockAuthConfig.organizationId;
-    setCurrentRole(role);
-    setUserOrganizationId(orgId || undefined);
-
-    // --- LOGIC: Trigger modal if intern is unassigned ---
-    if (role === 'intern' && !orgId) {
-      setShowJoinModal(true);
-    }
-  }, []);
-
-  const currentUser =
-    roleToUserMap[currentRole as keyof typeof roleToUserMap] || roleToUserMap.intern;
-  const currentIntern =
-    interns.find(
-      (intern) => intern.github === currentUser.github || intern.name === currentUser.name
-    ) || interns[0];
-
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -154,29 +116,14 @@ export default function InternDashboardPage() {
 
   const recentIssues = [...issues]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5);
-
-  const latestReportByIntern = reports.reduce<Record<string, (typeof reports)[number]>>(
-    (acc, report) => {
-      const existing = acc[report.internId];
-      if (
-        !existing ||
-        new Date(report.submittedAt).getTime() > new Date(existing.submittedAt).getTime()
-      ) {
-        acc[report.internId] = report;
-      }
-      return acc;
-    },
-    {}
-  );
+    .slice(0, 6);
 
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
-          {currentIntern ? `${currentIntern.team} Dashboard` : 'Intern Dashboard'}
+          Overview
         </h1>
-        <p className="text-text-muted">{currentIntern?.school || 'School not available'}</p>
         <p className="text-text-muted">{today}</p>
       </div>
 
@@ -185,13 +132,7 @@ export default function InternDashboardPage() {
         <JoinOrganizationCard currentOrganizationId={userOrganizationId} />
       )} */}
 
-      {/* --- ADDED MODAL COMPONENT --- */}
-      <JoinTeamModal 
-        isOpen={showJoinModal} 
-        onClose={() => setShowJoinModal(false)} 
-      />
-
-      <div className="grid w-full grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Total Interns"
           value={interns.length}
@@ -291,7 +232,7 @@ export default function InternDashboardPage() {
             {interns.length > 0 && getAttendanceByInternId(interns[0].id).length > 0 ? (
               [...getAttendanceByInternId(interns[0].id)]
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .slice(0, 2)
+                .slice(0, 5)
                 .map((log) => (
                   <div
                     key={log.id}
@@ -341,53 +282,83 @@ export default function InternDashboardPage() {
         </Card>
       </div>
 
+
+      <Card className="bg-bg-surface border-border-color p-6 mb-8">
+        <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
+          Attendance Log Summary
+        </h2>
+        <div className="space-y-3">
+          {interns.map((intern) => (
+            <div
+              key={intern.id}
+              className="p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Avatar className="h-8 w-8 bg-bg-base border border-border-color flex-shrink-0">
+                    <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono text-xs font-semibold">
+                      {intern.avatarInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">
+                      {intern.name}
+                    </p>
+                    <p className="text-xs text-text-muted">{intern.role}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 ml-2">
+              
+                  <span className="text-xs text-text-muted font-mono">
+                    {intern.lastActive}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
       <Card className="bg-bg-surface border-border-color p-6">
         <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
           Intern Status Summary
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {interns.map((intern) => (
-            (() => {
-              const latestReport = latestReportByIntern[intern.id];
-
-              return (
-                <Link key={intern.id} href={`/interns/${intern.id}`}>
-                  <div className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/50 transition-all card-glow cursor-pointer">
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
-                        <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
-                          {intern.avatarInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-text-primary truncate">
-                          {intern.name}
-                        </h3>
-                        <p className="text-xs text-text-muted mb-2">{intern.role}</p>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${
-                              latestReport?.status === 'reviewed'
-                                ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
-                                : latestReport?.status === 'pending'
-                                  ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
-                                  : 'bg-text-muted/10 text-text-muted border-text-muted/30'
-                            }`}
-                          >
-                            {latestReport?.status ?? 'no report'}
-                          </Badge>
-                          <span className="text-xs text-text-muted font-mono capitalize">
-                            {latestReport ? `${latestReport.type} report` : 'No recent report'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-text-muted">{intern.lastActive}</p>
-                      </div>
+            <Link key={intern.id} href={`/interns/${intern.id}`}>
+              <div className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/50 transition-all card-glow cursor-pointer">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
+                    <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
+                      {intern.avatarInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-text-primary truncate">
+                      {intern.name}
+                    </h3>
+                    <p className="text-xs text-text-muted mb-2">{intern.role}</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          intern.reportStatus === 'submitted'
+                            ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
+                            : intern.reportStatus === 'reviewed'
+                              ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
+                              : 'bg-text-muted/10 text-text-muted border-text-muted/30'
+                        }`}
+                      >
+                        {intern.reportStatus}
+                      </Badge>
+                      <span className="text-xs text-text-muted font-mono">
+                        {intern.score}%
+                      </span>
                     </div>
+                    <p className="text-xs text-text-muted">{intern.lastActive}</p>
                   </div>
-                </Link>
-              );
-            })()
+                </div>
+              </div>
+            </Link>
           ))}
         </div>
       </Card>
