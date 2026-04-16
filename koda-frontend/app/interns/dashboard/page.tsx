@@ -246,6 +246,75 @@ export default function InternDashboardPage() {
         </Card>
       </div>
 
+      <Card className="bg-bg-surface border-border-color p-6 mb-8">
+        <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
+          Submitted Reports
+        </h2>
+        <div className="space-y-3">
+          {reports
+            .filter((r) => r.status === 'submitted' || r.status === 'reviewed')
+            .map((report) => (
+              <div
+                key={report.id}
+                className="p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-text-primary">
+                    {report.title}
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={`text-xs flex-shrink-0 ${
+                      report.status === 'reviewed'
+                        ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
+                        : 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
+                    }`}
+                  >
+                    {report.status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-text-muted mt-1">
+                  Score: {report.score ?? 'N/A'}
+                </p>
+              </div>
+            ))}
+        </div>
+      </Card>
+      <Card className="bg-bg-surface border-border-color p-6 mb-8">
+        <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
+          Attendance Log Summary
+        </h2>
+        <div className="space-y-3">
+          {interns.map((intern) => (
+            <div
+              key={intern.id}
+              className="p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Avatar className="h-8 w-8 bg-bg-base border border-border-color flex-shrink-0">
+                    <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono text-xs font-semibold">
+                      {intern.avatarInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">
+                      {intern.name}
+                    </p>
+                    <p className="text-xs text-text-muted">{intern.role}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 ml-2">
+              
+                  <span className="text-xs text-text-muted font-mono">
+                    {intern.lastActive}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
       <Card className="bg-bg-surface border-border-color p-6">
         <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
           Intern Status Summary
