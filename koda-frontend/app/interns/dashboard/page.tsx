@@ -43,25 +43,25 @@ function StatCard({
     <Card className="bg-bg-surface border-border-color p-6 card-glow">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-label text-text-muted mb-2">{title}</p>
-          <p className="text-3xl font-mono font-bold text-text-primary mb-1">
+          <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
+            {title}
+          </p>
+          <p className="text-4xl font-mono font-bold text-text-primary mb-2">
             {value}
           </p>
-          <div className="flex items-center gap-1">
+          <p
+            className={`text-xs flex items-center gap-1 ${trend === 'up' ? 'text-accent-primary' : 'text-red-400'}`}
+          >
             {trend === 'up' ? (
-              <TrendingUp className="h-3 w-3 text-accent-primary" />
+              <TrendingUp className="w-3 h-3" />
             ) : (
-              <TrendingDown className="h-3 w-3 text-accent-danger" />
+              <TrendingDown className="w-3 h-3" />
             )}
-            <span
-              className={`text-xs ${trend === 'up' ? 'text-accent-primary' : 'text-accent-danger'}`}
-            >
-              {change}
-            </span>
-          </div>
+            {change}
+          </p>
         </div>
-        <div className="p-3 bg-bg-elevated rounded-lg">
-          <Icon className="h-6 w-6 text-accent-primary" />
+        <div className="p-2 bg-accent-primary/10 rounded-lg">
+          <Icon className="w-6 h-6 text-accent-primary" />
         </div>
       </div>
     </Card>
@@ -191,7 +191,7 @@ export default function InternDashboardPage() {
         onClose={() => setShowJoinModal(false)} 
       />
 
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid w-full grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Total Interns"
           value={interns.length}
