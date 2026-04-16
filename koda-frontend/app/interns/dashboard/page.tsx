@@ -1,16 +1,19 @@
 'use client';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { getAttendanceByInternId, interns, issues, reports } from '@/lib/mock-data';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-    FileText,
-    GitPullRequest,
-    TrendingDown,
-    TrendingUp,
-    Users,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  FileText,
+  GitPullRequest,
+  
 } from 'lucide-react';
+import { interns, issues, reports, mockAuthConfig, getAttendanceByInternId } from '@/lib/mock-data';
+import { JoinOrganizationCard } from '@/components/join-organization-card';
 import Link from 'next/link';
 
 function StatCard({
@@ -104,6 +107,16 @@ function formatDuration(totalMinutes: number) {
 }
 
 export default function InternDashboardPage() {
+  const [currentRole, setCurrentRole] = useState<string>(mockAuthConfig.role);
+  const [userOrganizationId, setUserOrganizationId] = useState<string | undefined>(mockAuthConfig.organizationId);
+
+  useEffect(() => {
+    const role = localStorage.getItem('selectedRole') || mockAuthConfig.role;
+    const orgId = localStorage.getItem('userOrganizationId') || mockAuthConfig.organizationId;
+    setCurrentRole(role);
+    setUserOrganizationId(orgId || undefined);
+  }, []);
+
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -132,7 +145,7 @@ export default function InternDashboardPage() {
         <JoinOrganizationCard currentOrganizationId={userOrganizationId} />
       )} */}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard
           title="Total Interns"
           value={interns.length}
@@ -282,40 +295,7 @@ export default function InternDashboardPage() {
         </Card>
       </div>
 
-      <Card className="bg-bg-surface border-border-color p-6 mb-8">
-        <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
-          Submitted Reports
-        </h2>
-        <div className="space-y-3">
-          {reports
-            .filter((r) => r.status === 'submitted' || r.status === 'reviewed')
-            .map((report) => (
-              <div
-                key={report.id}
-                className="p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-text-primary">
-                    {report.title}
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs flex-shrink-0 ${
-                      report.status === 'reviewed'
-                        ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
-                        : 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
-                    }`}
-                  >
-                    {report.status}
-                  </Badge>
-                </div>
-                <p className="text-xs text-text-muted mt-1">
-                  Score: {report.score ?? 'N/A'}
-                </p>
-              </div>
-            ))}
-        </div>
-      </Card>
+
       <Card className="bg-bg-surface border-border-color p-6 mb-8">
         <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
           Attendance Log Summary
