@@ -36,7 +36,7 @@ function isAdminNavItemActive(pathname: string, href: string) {
 export function Sidebar() {
   const pathname = usePathname();
   const { user, isLoading } = useCurrentUser();
-  const normalizedRole = user?.role === 'team_lead' ? 'coordinator' : user?.role;
+  const normalizedRole = user?.role === 'team_lead' ? 'admin' : user?.role;
   const currentRole = normalizedRole ?? 'coordinator';
 
   if (isLoading) {
