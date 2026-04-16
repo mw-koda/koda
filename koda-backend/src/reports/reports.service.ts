@@ -29,9 +29,7 @@ export class ReportsService {
     }
 
     if (existing && existing.length > 0) {
-      throw new BadRequestException(
-        'Report already exists for this period',
-      );
+      throw new BadRequestException('Report already exists for this period');
     }
 
     // Insert with default status
@@ -53,10 +51,7 @@ export class ReportsService {
 
   // ---------------- GET REPORTS BY INTERN ----------------
   async findByIntern(internId: string, filters: any) {
-    let query = this.db
-      .from('reports')
-      .select('*')
-      .eq('intern_id', internId);
+    let query = this.db.from('reports').select('*').eq('intern_id', internId);
 
     // Optional period filters
     if (filters.periodStart) {

@@ -1,5 +1,12 @@
 import {
-  Controller, Get, Post, Body, Param, Query, Patch, Delete
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { InternsService } from './interns.service';
 import { CreateInternDto } from './dto/create-intern.dto';

@@ -69,7 +69,7 @@ export default function JoinTeamModal({ isOpen, onClose }: JoinTeamModalProps) {
             </Button>
             
             <p className="text-center text-xs text-text-muted italic">
-              Don't have a code? Contact your supervisor.
+              Don&apos;t have a code? Contact your supervisor.
             </p>
           </form>
         </CardContent>

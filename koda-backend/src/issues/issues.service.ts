@@ -10,13 +10,20 @@ export interface Issue {
   id: string;
   github_issue_id: string;
   repo_id: string;
+  title: string;
   state: string;
   created_at: string | null;
+  updated_at: string | null;
+  closed_at: string | null;
+  labels: Record<string, unknown>[];
+  assignee_name?: string | null;
+  assignee_username?: string | null;
+  assignee_avatar?: string | null;
   [key: string]: unknown;
 }
 
 interface IssueAssignmentRow {
-  issues: Issue[] | null;
+  issues: any | null;
 }
 
 @Injectable()
@@ -27,36 +34,53 @@ export class IssuesService {
     return this.supabase.getClient();
   }
 
+  private readonly ISSUE_SELECT =
+    '*, issue_assignments(interns(users(name, github_username, avatar_url)))';
+
+  private mapIssue(raw: any): Issue {
+    const { issue_assignments, ...issue } = raw;
+    const assignment = issue_assignments?.[0];
+    const intern = assignment?.interns;
+    const user = intern?.users;
+
+    return {
+      ...issue,
+      assignee_name: user?.name || null,
+      assignee_username: user?.github_username || null,
+      assignee_avatar: user?.avatar_url || null,
+    } as Issue;
+  }
+
   async upsertFromWebhook(dto: CreateIssueDto): Promise<Issue> {
     const { data, error } = await this.client
       .from('issues')
       .upsert(dto, { onConflict: 'github_issue_id' })
-      .select()
-      .single<Issue>();
+      .select(this.ISSUE_SELECT)
+      .single();
 
     if (error) {
       throw new Error(error.message);
     }
 
-    return data;
+    return this.mapIssue(data);
   }
 
   async updateByGithubId(
     github_issue_id: string,
     dto: UpdateIssueDto,
-  ): Promise<Issue> {
+  ): Promise<Issue | null> {
     const { data, error } = await this.client
       .from('issues')
       .update(dto)
       .eq('github_issue_id', github_issue_id)
-      .select()
-      .single<Issue>();
+      .select(this.ISSUE_SELECT)
+      .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
 
-    return data;
+    return data ? this.mapIssue(data) : null;
   }
 
   async findAll(filter: IssueFilterDto = {}): Promise<{
@@ -76,7 +100,7 @@ export class IssuesService {
 
     let query = this.client
       .from('issues')
-      .select('*', { count: 'exact' })
+      .select(this.ISSUE_SELECT, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range((page - 1) * limit, page * limit - 1);
 
@@ -96,14 +120,14 @@ export class IssuesService {
       query = query.lte('created_at', period_end);
     }
 
-    const { data, error, count } = await query.returns<Issue[]>();
+    const { data, error, count } = await query;
 
     if (error) {
       throw new Error(error.message);
     }
 
     return {
-      data: data ?? [],
+      data: (data ?? []).map((i) => this.mapIssue(i)),
       total: count,
       page,
       limit,
@@ -113,15 +137,15 @@ export class IssuesService {
   async findOne(id: string): Promise<Issue | null> {
     const { data, error } = await this.client
       .from('issues')
-      .select('*')
+      .select(this.ISSUE_SELECT)
       .eq('id', id)
-      .single<Issue>();
+      .maybeSingle();
 
     if (error) {
       throw new Error(error.message);
     }
 
-    return data;
+    return data ? this.mapIssue(data) : null;
   }
 
   async findByInternId(
@@ -132,15 +156,16 @@ export class IssuesService {
 
     const { data, error } = await this.client
       .from('issue_assignments')
-      .select('issues(*)')
-      .eq('intern_id', intern_id)
-      .returns<IssueAssignmentRow[]>();
+      .select(`issues(${this.ISSUE_SELECT})`)
+      .eq('intern_id', intern_id);
 
     if (error) {
       throw new Error(error.message);
     }
 
-    const issues: Issue[] = (data ?? []).flatMap((row) => row.issues ?? []);
+    const issues: Issue[] = (data ?? []).flatMap((row: any) =>
+      row.issues ? [this.mapIssue(row.issues)] : [],
+    );
 
     let filteredIssues = issues;
 
@@ -165,12 +190,11 @@ export class IssuesService {
   async findRecent(limit = 10): Promise<Issue[]> {
     const { data, error } = await this.client
       .from('issues')
-      .select('*')
+      .select(this.ISSUE_SELECT)
       .order('updated_at', { ascending: false })
-      .limit(limit)
-      .returns<Issue[]>();
+      .limit(limit);
 
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return (data ?? []).map((i) => this.mapIssue(i));
   }
 }

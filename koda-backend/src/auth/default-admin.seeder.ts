@@ -22,7 +22,9 @@ export class DefaultAdminSeeder implements OnApplicationBootstrap {
     }
 
     if (!this.supabaseService.isConfigured()) {
-      this.logger.warn('Skipping default admin seed: Supabase is not configured.');
+      this.logger.warn(
+        'Skipping default admin seed: Supabase is not configured.',
+      );
       return;
     }
 
@@ -30,9 +32,8 @@ export class DefaultAdminSeeder implements OnApplicationBootstrap {
       this.configService.get<string>('DEFAULT_ADMIN_NAME')?.trim() ||
       'System Administrator';
     const githubUsername =
-      this.configService
-        .get<string>('DEFAULT_ADMIN_GITHUB_USERNAME')
-        ?.trim() || 'system-admin';
+      this.configService.get<string>('DEFAULT_ADMIN_GITHUB_USERNAME')?.trim() ||
+      'system-admin';
     const githubId =
       this.configService.get<string>('DEFAULT_ADMIN_GITHUB_ID')?.trim() ||
       `seed-admin:${email}`;

@@ -42,22 +42,15 @@ export class IssueAssignmentsService {
    * Looks up the intern by github_username and creates an auto-assignment.
    */
   async autoLinkFromWebhook(
-    github_issue_id: string,
+    issue_id: string,
     github_username: string,
   ): Promise<IssueAssignment | null> {
     const client = this.supabase.getClient();
-    const { data: issue, error: issueErr } = await client
-      .from('issues')
-      .select('id')
-      .eq('github_issue_id', github_issue_id)
-      .single<IssueRow>();
-
-    if (issueErr || !issue) return null;
 
     const { data: user, error: userErr } = await client
       .from('users')
       .select('id')
-      .eq('github_username', github_username)
+      .ilike('github_username', github_username)
       .single<UserRow>();
 
     if (userErr || !user) return null;
@@ -74,7 +67,7 @@ export class IssueAssignmentsService {
       .from('issue_assignments')
       .upsert(
         {
-          issue_id: issue.id,
+          issue_id: issue_id,
           intern_id: intern.id,
           manual: false,
           assigned_at: new Date().toISOString(),

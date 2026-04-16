@@ -32,7 +32,8 @@ export class CreateBatchDto {
   @IsOptional()
   @IsString()
   @Matches(/^[A-Z0-9]{6,}$/, {
-    message: 'joinCode must be uppercase alphanumeric with at least 6 characters',
+    message:
+      'joinCode must be uppercase alphanumeric with at least 6 characters',
   })
   joinCode?: string;
 }

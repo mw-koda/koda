@@ -15,10 +15,7 @@ export class InternsService {
 
   // ---------------- CREATE INTERN ----------------
   async create(dto: any) {
-    const { data, error } = await this.db
-      .from('interns')
-      .insert(dto)
-      .select();
+    const { data, error } = await this.db.from('interns').insert(dto).select();
 
     if (error) {
       console.error('🔥 CREATE INTERN ERROR:', error);
@@ -106,10 +103,7 @@ export class InternsService {
 
   // ---------------- DELETE INTERN ----------------
   async remove(id: string) {
-    const { error } = await this.db
-      .from('interns')
-      .delete()
-      .eq('id', id);
+    const { error } = await this.db.from('interns').delete().eq('id', id);
 
     if (error) {
       console.error('🔥 DELETE INTERN ERROR:', error);
