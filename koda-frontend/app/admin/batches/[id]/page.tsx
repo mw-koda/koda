@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users, Plus } from 'lucide-react'; // Added Plus icon
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { batchesApi, type BatchDetail } from '@/lib/api/batches';
 import CreateTeamModal from '../create-team-modal/modal'; // Adjust path based on your folder structure
+import type { TeamDetail } from '@/lib/api/teams';
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -50,6 +52,7 @@ function BatchNotFound() {
 }
 
 export default function BatchDetailsPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [batch, setBatch] = useState<BatchDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,9 +86,8 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
   }, [isMounted, params.id]);
 
   // 2. Add Success Handler
-  const handleTeamCreated = (payload: any) => {
-    console.log("Team created for batch:", params.id, payload);
-    // You can trigger a refetch here if you have a teams list to update
+  const handleTeamCreated = (team: TeamDetail) => {
+    router.push(`/admin/teams/${team.id}/dashboard`);
   };
 
   if (!isMounted || isLoading) {
