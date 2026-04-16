@@ -29,7 +29,7 @@ export class UsersController {
   async onboardUser(@Body() dto: OnboardUserDto): Promise<UserRecord> {
     return this.usersService.onboardUser(dto);
   }
-  
+
   @Get()
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
   async getUsers(@Query() query: GetUsersQueryDto): Promise<UserRecord[]> {

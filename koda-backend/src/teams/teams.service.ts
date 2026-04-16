@@ -101,16 +101,16 @@ export class TeamsService {
     if (createTeamDto.teamLeadId) {
       const assignedLead = await this.getUserOrThrow(createTeamDto.teamLeadId);
       if (assignedLead.role !== Role.TEAM_LEAD) {
-        throw new BadRequestException('Assigned team lead must have team_lead role.');
+        throw new BadRequestException(
+          'Assigned team lead must have team_lead role.',
+        );
       }
 
-      const addLeadResult = (await supabase
-        .from('team_members')
-        .insert({
-          team_id: result.data.id,
-          user_id: createTeamDto.teamLeadId,
-          role: Role.TEAM_LEAD,
-        })) as unknown as {
+      const addLeadResult = (await supabase.from('team_members').insert({
+        team_id: result.data.id,
+        user_id: createTeamDto.teamLeadId,
+        role: Role.TEAM_LEAD,
+      })) as unknown as {
         error: { message: string } | null;
       };
 
@@ -203,7 +203,11 @@ export class TeamsService {
     return this.findOne(teamId, actorId, actorRole);
   }
 
-  async findOne(id: string, actorId: string, actorRole: Role): Promise<TeamDetail> {
+  async findOne(
+    id: string,
+    actorId: string,
+    actorRole: Role,
+  ): Promise<TeamDetail> {
     await this.assertCanManageTeam(id, actorId, actorRole);
     const team = await this.getTeamOrThrow(id);
 
@@ -270,7 +274,9 @@ export class TeamsService {
     }
 
     const teamIds = (teamsResult.data ?? []).map((team) => team.id);
-    return Promise.all(teamIds.map((id) => this.findOne(id, actorId, actorRole)));
+    return Promise.all(
+      teamIds.map((id) => this.findOne(id, actorId, actorRole)),
+    );
   }
 
   private async getTeamOrThrow(id: string): Promise<TeamRow> {
@@ -321,7 +327,9 @@ export class TeamsService {
     actorRole: Role,
   ): Promise<void> {
     if (!this.canManageTeams(actorRole)) {
-      throw new ForbiddenException('Only admins and team leads can manage teams.');
+      throw new ForbiddenException(
+        'Only admins and team leads can manage teams.',
+      );
     }
 
     const team = await this.getTeamOrThrow(teamId);

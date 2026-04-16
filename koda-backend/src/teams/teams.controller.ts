@@ -45,7 +45,12 @@ export class TeamsController {
     @Body() addTeamMemberDto: AddTeamMemberDto,
     @CurrentUser() user: UserRecord,
   ) {
-    return this.teamsService.addMember(id, addTeamMemberDto, user.id, user.role);
+    return this.teamsService.addMember(
+      id,
+      addTeamMemberDto,
+      user.id,
+      user.role,
+    );
   }
 
   @Delete(':id/members/:userId')
@@ -60,7 +65,10 @@ export class TeamsController {
 
   @Get(':id')
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
-  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: UserRecord) {
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserRecord,
+  ) {
     return this.teamsService.findOne(id, user.id, user.role);
   }
 }

@@ -66,9 +66,9 @@ export default function ReportsPerformancePage() {
                             <Bar
                                 dataKey="score"
                                 fill="#003a6b"
-                                radius={[0, 4, 4, 0]}
+                                radius={4}
                                 barSize={24}
-                                background={{ fill: '#1e293b', radius: [0, 4, 4, 0] }} // Visible track
+                                background={{ fill: '#1e293b', radius: 4 }} // Visible track
                             />
                         </BarChart>
                     </ResponsiveContainer>
