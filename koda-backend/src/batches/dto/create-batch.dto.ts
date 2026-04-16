@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Min,
 } from 'class-validator';
 
@@ -27,4 +28,11 @@ export class CreateBatchDto {
   @IsInt()
   @Min(1)
   maxInterns!: number;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z0-9]{6,}$/, {
+    message: 'joinCode must be uppercase alphanumeric with at least 6 characters',
+  })
+  joinCode?: string;
 }
