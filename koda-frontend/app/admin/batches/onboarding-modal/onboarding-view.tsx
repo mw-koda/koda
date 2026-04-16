@@ -1,3 +1,5 @@
+// koda-frontend/app/admin/batches/onboarding-modal/onboarding-view.tsx
+
 "use client";
 
 import { Rocket, Plus } from "lucide-react";
@@ -12,13 +14,12 @@ import {
 
 interface AdminOnboardingModalProps {
   isOpen: boolean;
-  onOpenBatchCreate: () => void; // Function to trigger the actual creation form
+  onOpenBatchCreate: () => void; // This will trigger opening the Create Batch modal
 }
 
 export default function AdminOnboardingModal({ isOpen, onOpenBatchCreate }: AdminOnboardingModalProps) {
   return (
     <Dialog open={isOpen}>
-      {/* We remove the close button (hideClose) to force the user to initialize */}
       <DialogContent className="max-w-xl border-2 bg-bg-surface/95 backdrop-blur-md border-border-color shadow-2xl">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-2xl bg-accent-primary/10 rotate-3 ring-1 ring-accent-primary/20">
@@ -45,8 +46,8 @@ export default function AdminOnboardingModal({ isOpen, onOpenBatchCreate }: Admi
           </div>
 
           <Button 
-            onClick={onOpenBatchCreate}
-            className="group w-full bg-accent-primary hover:bg-accent-secondary text-bg-base font-bold h-14 text-xl shadow-lg transition-all duration-300 ease-out hover:-translate-y-0.5"
+            onClick={onOpenBatchCreate} // Triggers the switch
+            className="group w-full bg-accent-primary hover:bg-accent-secondary text-white font-bold h-14 text-xl shadow-lg transition-all duration-300 ease-out hover:-translate-y-0.5"
           >
             <Plus className="mr-2 h-6 w-6 stroke-[3px] transition-transform duration-300 group-hover:rotate-90" />
             Initialize First Batch

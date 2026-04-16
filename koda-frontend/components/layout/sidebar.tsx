@@ -23,6 +23,7 @@ import { auth } from '@/lib/auth';
 const adminNavigation = [
   { name: 'User Management', href: '/admin', icon: ShieldCheck },
   { name: 'Batch Management', href: '/admin/batches', icon: Layers, match: 'prefix' },
+  { name: 'Team Management', href: '/admin/teams', icon: Users, match: 'prefix' }, // New Item
 ];
 
 function isAdminNavItemActive(pathname: string, href: string) {
