@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Users, Hash, Building2 } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Users, Hash, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,9 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Define the Team Type for strict metadata consistency
-export type TeamType = 'Database Team' | 'GHL Team' | 'Scraping Team' | 'Agentic Rag';
+import { getUsers, type ApiUser } from "@/lib/api/users";
 
 interface CreateTeamModalProps {
   isOpen: boolean;
@@ -32,6 +30,51 @@ interface CreateTeamModalProps {
 
 export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<ApiUser[]>([]);
+  const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
+  const [adminLoadError, setAdminLoadError] = useState<string | null>(null);
+  const [teamLeadId, setTeamLeadId] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAdmins = async () => {
+      try {
+        setIsLoadingAdmins(true);
+        setAdminLoadError(null);
+        const admins = await getUsers({ role: 'admin' });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAdminUsers(admins);
+      } catch (err: unknown) {
+        if (!isMounted) {
+          return;
+        }
+
+        setAdminLoadError(err instanceof Error ? err.message : 'Failed to load admins');
+        setAdminUsers([]);
+      } finally {
+        if (isMounted) {
+          setIsLoadingAdmins(false);
+        }
+      }
+    };
+
+    void loadAdmins();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!teamLeadId && adminUsers.length > 0) {
+      setTeamLeadId(adminUsers[0].id);
+    }
+  }, [adminUsers, teamLeadId]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,9 +85,9 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
     // Constructing the metadata payload
     const payload = {
       name: formData.get('name') as string,
-      team: formData.get('teamType') as TeamType,
+      description: formData.get('description') as string,
+      teamLeadId,
       maxInterns: parseInt(formData.get('maxInterns') as string, 10),
-      organizationId: (formData.get('organizationId') as string) || undefined,
     };
 
     // Simulate API call (Replace with your actual teamsApi.create call later)
@@ -88,58 +131,74 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
             </div>
           </div>
 
-          {/* Team Type (Specialization Metadata) */}
+          {/* Team Description */}
           <div className="space-y-2">
-            <Label htmlFor="teamType" className="text-text-muted font-mono text-xs uppercase tracking-wider">
-              Specialization
+            <Label htmlFor="description" className="text-text-muted font-mono text-xs uppercase tracking-wider">
+              Short Description
             </Label>
-            <Select name="teamType" required defaultValue="Database Team">
+            <div className="relative">
+              <Input
+                id="description"
+                name="description"
+                placeholder="e.g. Client onboarding support team"
+                required
+                className="bg-bg-elevated border-border-color focus:ring-accent-primary pl-10 h-11"
+              />
+              <FileText className="absolute left-3 top-3.5 h-4 w-4 text-text-muted" />
+            </div>
+          </div>
+
+          {/* Assign Team Lead */}
+          <div className="space-y-2">
+            <Label htmlFor="teamLeadId" className="text-text-muted font-mono text-xs uppercase tracking-wider">
+              Assign Team Lead
+            </Label>
+            <Select
+              name="teamLeadId"
+              required
+              value={teamLeadId}
+              onValueChange={setTeamLeadId}
+              disabled={isLoadingAdmins || adminUsers.length === 0 || Boolean(adminLoadError)}
+            >
               <SelectTrigger className="bg-bg-elevated border-border-color h-11">
-                <SelectValue placeholder="Select team type" />
+                <SelectValue
+                  placeholder={
+                    isLoadingAdmins
+                      ? "Loading admins..."
+                      : adminLoadError
+                      ? "Unable to load admins"
+                      : adminUsers.length
+                      ? "Select team lead"
+                      : "No admins available"
+                  }
+                />
               </SelectTrigger>
               <SelectContent className="bg-bg-surface border-border-color">
-                <SelectItem value="Database Team">Database Team</SelectItem>
-                <SelectItem value="GHL Team">GHL Team</SelectItem>
-                <SelectItem value="Scraping Team">Scraping Team</SelectItem>
-                <SelectItem value="Agentic Rag">Agentic Rag</SelectItem>
+                {adminUsers.map((admin) => (
+                  <SelectItem key={admin.id} value={admin.id}>
+                    {admin.name ?? admin.github_username ?? admin.email ?? admin.id}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Capacity */}
-            <div className="space-y-2">
-              <Label htmlFor="maxInterns" className="text-text-muted font-mono text-xs uppercase tracking-wider">
-                Capacity
-              </Label>
-              <div className="relative">
-                <Input
-                  id="maxInterns"
-                  name="maxInterns"
-                  type="number"
-                  placeholder="5"
-                  required
-                  min="1"
-                  className="bg-bg-elevated border-border-color pl-10 h-11"
-                />
-                <Users className="absolute left-3 top-3.5 h-4 w-4 text-text-muted" />
-              </div>
-            </div>
-
-            {/* Organization ID */}
-            <div className="space-y-2">
-              <Label htmlFor="organizationId" className="text-text-muted font-mono text-xs uppercase tracking-wider">
-                Org ID (Optional)
-              </Label>
-              <div className="relative">
-                <Input
-                  id="organizationId"
-                  name="organizationId"
-                  placeholder="ORG-01"
-                  className="bg-bg-elevated border-border-color pl-10 h-11"
-                />
-                <Building2 className="absolute left-3 top-3.5 h-4 w-4 text-text-muted" />
-              </div>
+          {/* Capacity */}
+          <div className="space-y-2">
+            <Label htmlFor="maxInterns" className="text-text-muted font-mono text-xs uppercase tracking-wider">
+              Capacity
+            </Label>
+            <div className="relative">
+              <Input
+                id="maxInterns"
+                name="maxInterns"
+                type="number"
+                placeholder="5"
+                required
+                min="1"
+                className="bg-bg-elevated border-border-color pl-10 h-11"
+              />
+              <Users className="absolute left-3 top-3.5 h-4 w-4 text-text-muted" />
             </div>
           </div>
 
