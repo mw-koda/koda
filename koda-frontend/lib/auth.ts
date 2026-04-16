@@ -13,6 +13,13 @@ export const auth = {
     localStorage.removeItem(TOKEN_KEY);
   },
 
+  clearSession() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('selectedRole');
+    localStorage.removeItem('userOrganizationId');
+    sessionStorage.clear();
+  },
+
   isAuthenticated(): boolean {
     return !!localStorage.getItem(TOKEN_KEY);
   },
