@@ -25,6 +25,16 @@ export interface Organization {
   interns: string[]; // intern IDs
 }
 
+export interface Batch {
+  id: string;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  maxInterns: number;
+  createdAt: string;
+}
+
 export interface Issue {
   id: string;
   number: number;
@@ -236,6 +246,18 @@ export const interns: Intern[] = [
     organizationId: 'org-1',
     school: 'Cebu Institute of Technology University',
 
+  },
+];
+
+export const batches: Batch[] = [
+  {
+    id: 'batch-1',
+    name: 'Q1 2024 Intake',
+    description: 'First batch of 2024',
+    startDate: '2024-01-01',
+    endDate: '2024-03-31',
+    maxInterns: 20,
+    createdAt: '2023-12-01T00:00:00Z',
   },
 ];
 

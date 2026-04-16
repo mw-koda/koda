@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { roleRedirects } from '@/lib/role-redirects';
+import { roleRedirects, AppRole } from '@/lib/role-redirects';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -31,7 +31,7 @@ export default function AuthCallbackPage() {
         return res.json() as Promise<{ user: { role: string; is_onboarded: boolean } }>;
       })
       .then(({ user }) => {
-        const normalizedRole = user.role === 'team_lead' ? 'admin' : user.role;
+        const normalizedRole = (user.role === 'team_lead' ? 'coordinator' : user.role) as AppRole;
         localStorage.setItem('selectedRole', normalizedRole);
 
         router.replace(roleRedirects[normalizedRole] ?? '/dashboard');

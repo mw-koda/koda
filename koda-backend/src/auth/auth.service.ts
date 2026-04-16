@@ -78,7 +78,10 @@ export class AuthService {
         .from('users')
         .update({
           github_username: githubUser.username,
-          name: existingResponse.data.name ?? githubUser.name ?? githubUser.username,
+          name:
+            existingResponse.data.name ??
+            githubUser.name ??
+            githubUser.username,
           email: githubUser.email,
           avatar_url: githubUser.avatarUrl,
           is_onboarded: true,
@@ -121,7 +124,10 @@ export class AuthService {
         .update({
           github_id: githubUser.githubId,
           github_username: githubUser.username,
-          name: usernameResponse.data.name ?? githubUser.name ?? githubUser.username,
+          name:
+            usernameResponse.data.name ??
+            githubUser.name ??
+            githubUser.username,
           email: githubUser.email,
           avatar_url: githubUser.avatarUrl,
           is_onboarded: true,

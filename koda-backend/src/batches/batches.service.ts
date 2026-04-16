@@ -380,7 +380,7 @@ export class BatchesService {
     enrolledCount: number,
   ): BatchSummary {
     const status = this.computeStatus(batch.start_date, batch.end_date);
-    
+
     return {
       id: batch.id,
       name: batch.name,
@@ -398,7 +398,10 @@ export class BatchesService {
     };
   }
 
-  private computeStatus(startDate: string, endDate: string): 'active' | 'completed' {
+  private computeStatus(
+    startDate: string,
+    endDate: string,
+  ): 'active' | 'completed' {
     const now = new Date();
     const start = new Date(startDate);
     const end = new Date(endDate);

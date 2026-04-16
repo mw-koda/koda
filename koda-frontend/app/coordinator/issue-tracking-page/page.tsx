@@ -1,18 +1,17 @@
-// src/app/(dashboard)/issues/page.tsx
 'use client';
 
 import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { issues } from '@/lib/mock-data';
+import { useAllIssues } from '@/hooks/use-all-issues';
 
-type IssueStatusFilter = 'all' | 'open' | 'in-progress' | 'closed';
+type IssueStateFilter = 'all' | 'open' | 'in_progress' | 'closed';
 
-function getStatusBadgeClass(status: string) {
-    switch (status) {
+function getStatusBadgeClass(state: string) {
+    switch (state) {
         case 'open':
             return 'bg-amber-500/10 text-amber-500 border-amber-500/30';
-        case 'in-progress':
+        case 'in_progress': // Updated to underscore
             return 'bg-accent-warning/10 text-accent-warning border-accent-warning/30';
         case 'closed':
             return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30';
@@ -21,7 +20,8 @@ function getStatusBadgeClass(status: string) {
     }
 }
 
-function formatShortDate(dateStr: string) {
+function formatShortDate(dateStr: string | null) {
+    if (!dateStr) return 'N/A';
     return new Date(dateStr).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -30,26 +30,41 @@ function formatShortDate(dateStr: string) {
 }
 
 export default function IssueTrackingPage() {
-    const [statusFilter, setStatusFilter] = useState<IssueStatusFilter>('all');
-    const [assigneeFilter, setAssigneeFilter] = useState('all');
+    // Fetch data from backend
+    const { issues, isLoading, error } = useAllIssues();
+
+    const [stateFilter, setStateFilter] = useState<IssueStateFilter>('all');
     const [repoFilter, setRepoFilter] = useState('all');
+    const [assigneeFilter, setAssigneeFilter] = useState('all');
+    // Extract unique repo_ids for the filter dropdown
+    const repos = useMemo(() => {
+        return Array.from(new Set(issues.map((issue) => issue.repo_id))).sort();
+    }, [issues]);
 
     const assignees = useMemo(() => {
-        return Array.from(new Set(issues.map((issue) => issue.assignee))).sort();
-    }, []);
+        return Array.from(
+            new Set(issues.map((issue) => issue.assignee_name || issue.assignee_username).filter((name): name is string => !!name))
+        ).sort();
+    }, [issues]);
 
-    const repos = useMemo(() => {
-        return Array.from(new Set(issues.map((issue) => issue.repo))).sort();
-    }, []);
-
+    // Apply frontend filters
     const filtered = useMemo(() => {
         return issues.filter((issue) => {
-            const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
-            const matchesAssignee = assigneeFilter === 'all' || issue.assignee === assigneeFilter;
-            const matchesRepo = repoFilter === 'all' || issue.repo === repoFilter;
-            return matchesStatus && matchesAssignee && matchesRepo;
+            const matchesState = stateFilter === 'all' || issue.state === stateFilter;
+            const matchesRepo = repoFilter === 'all' || issue.repo_id === repoFilter;
+            const displayName = issue.assignee_name || issue.assignee_username;
+            const matchesAssignee = assigneeFilter === 'all' || displayName === assigneeFilter;
+            return matchesState && matchesRepo && matchesAssignee;
         });
-    }, [statusFilter, assigneeFilter, repoFilter]);
+    }, [issues, stateFilter, repoFilter, assigneeFilter]);
+
+    if (isLoading) {
+        return <div className="p-8 text-text-primary animate-pulse">Loading issues from backend...</div>;
+    }
+
+    if (error) {
+        return <div className="p-8 text-red-500">Error: {error}</div>;
+    }
 
     return (
         <div className="p-8">
@@ -63,27 +78,14 @@ export default function IssueTrackingPage() {
             <Card className="bg-bg-surface border-border-color p-4 mb-6">
                 <div className="flex flex-col lg:flex-row gap-3">
                     <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as IssueStatusFilter)}
+                        value={stateFilter}
+                        onChange={(e) => setStateFilter(e.target.value as IssueStateFilter)}
                         className="bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
                     >
                         <option value="all">All Status</option>
                         <option value="open">Open</option>
-                        <option value="in-progress">In Progress</option>
+                        <option value="in_progress">In Progress</option>
                         <option value="closed">Closed</option>
-                    </select>
-
-                    <select
-                        value={assigneeFilter}
-                        onChange={(e) => setAssigneeFilter(e.target.value)}
-                        className="bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
-                    >
-                        <option value="all">All Assignees</option>
-                        {assignees.map((assignee) => (
-                            <option key={assignee} value={assignee}>
-                                {assignee}
-                            </option>
-                        ))}
                     </select>
 
                     <select
@@ -98,6 +100,19 @@ export default function IssueTrackingPage() {
                             </option>
                         ))}
                     </select>
+
+                    <select
+                        value={assigneeFilter}
+                        onChange={(e) => setAssigneeFilter(e.target.value)}
+                        className="bg-bg-elevated border border-border-color rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary"
+                    >
+                        <option value="all">All Assignees</option>
+                        {assignees.map((assignee) => (
+                            <option key={assignee} value={assignee}>
+                                {assignee}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </Card>
 
@@ -106,68 +121,79 @@ export default function IssueTrackingPage() {
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-border-color bg-bg-elevated/30">
-                                <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">#</th>
+                                <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">ID</th>
                                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Title</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Repository</th>
+                                <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Repo ID</th>
                                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Assignee</th>
                                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Status</th>
                                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Labels</th>
-                                <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Opened</th>
+                                <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Created</th>
                                 <th className="px-6 py-3 text-xs font-semibold text-text-muted uppercase">Updated</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-color">
                             {filtered.map((issue) => (
                                 <tr key={issue.id} className="hover:bg-bg-elevated/50">
-                                    <td className="px-6 py-4 text-sm text-text-muted">{issue.number}</td>
+                                    <td className="px-6 py-4 text-sm text-text-muted">
+                                        {issue.github_issue_id || issue.id.substring(0, 8)}
+                                    </td>
                                     <td className="px-6 py-4 text-sm text-text-primary font-medium">
                                         {issue.title}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-text-muted">{issue.repo}</td>
+                                    <td className="px-6 py-4 text-text-muted font-mono text-xs">
+                                        {issue.repo_id}
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-bg-elevated border border-border-color text-[10px] font-semibold text-text-primary">
-                                                {issue.assigneeAvatar}
+                                            {issue.assignee_avatar ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img 
+                                                    src={issue.assignee_avatar} 
+                                                    alt={issue.assignee_name || 'Assignee'} 
+                                                    className="h-6 w-6 rounded-full border border-border-color"
+                                                />
+                                            ) : (
+                                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-bg-elevated border border-border-color text-[10px] font-semibold text-text-primary">
+                                                    ?
+                                                </span>
+                                            )}
+                                            <span className={`text-sm ${(issue.assignee_name || issue.assignee_username) ? 'text-text-primary' : 'text-text-muted italic'}`}>
+                                                {issue.assignee_name || issue.assignee_username || 'Unassigned'}
                                             </span>
-                                            <span className="text-sm text-text-primary">{issue.assignee}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <Badge
                                             variant="outline"
-                                            className={`text-[10px] uppercase px-3 py-1 rounded-full ${getStatusBadgeClass(
-                                                issue.status
-                                            )}`}
+                                            className={`text-[10px] uppercase px-3 py-1 rounded-full ${getStatusBadgeClass(issue.state)}`}
                                         >
-                                            {issue.status}
+                                            {issue.state.replace('_', ' ')}
                                         </Badge>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-wrap gap-2">
-                                            {issue.labels.map((label) => (
+                                            {/* Mapping over object arrays and attempting to extract a 'name' property */}
+                                            {issue.labels?.map((label: any, idx) => (
                                                 <span
-                                                    key={label}
+                                                    key={idx}
                                                     className="text-[10px] uppercase px-2.5 py-1 rounded-full border border-border-color text-text-muted"
                                                 >
-                                                    {label}
+                                                    {label.name || 'LABEL'} 
                                                 </span>
                                             ))}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-text-muted">
-                                        {formatShortDate(issue.openedAt)}
+                                        {formatShortDate(issue.created_at)}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-text-muted">
-                                        {formatShortDate(issue.updatedAt)}
+                                        {formatShortDate(issue.updated_at)}
                                     </td>
                                 </tr>
                             ))}
                             {filtered.length === 0 && (
                                 <tr>
-                                    <td
-                                        colSpan={8}
-                                        className="px-6 py-10 text-center text-sm text-text-muted"
-                                    >
+                                    <td colSpan={8} className="px-6 py-10 text-center text-sm text-text-muted">
                                         No issues found matching your filters.
                                     </td>
                                 </tr>

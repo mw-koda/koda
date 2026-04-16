@@ -1,4 +1,8 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { Role } from '../../common/enums/role.enum';
 import type { UserRecord } from '../auth.service';

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Github } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 // import { mockAuthConfig, roleRedirects } from '@/lib/mock-data';
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 

@@ -7,6 +7,7 @@ import { BatchesModule } from './batches/batches.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PerformanceModule } from './performance/performance.module';
 import { SupabaseModule } from './supabase/supabase.module';
+import { WebhookModule } from './webhook/webhook.module';
 import { TeamsModule } from './teams/teams.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { TeamsModule } from './teams/teams.module';
     BatchesModule,
     PerformanceModule,
     DashboardModule,
+    WebhookModule,
     TeamsModule,
   ],
   controllers: [AppController],

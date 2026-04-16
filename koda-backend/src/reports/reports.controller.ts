@@ -1,5 +1,11 @@
 import {
-  Controller, Post, Get, Param, Query, Patch, Body
+  Controller,
+  Post,
+  Get,
+  Param,
+  Query,
+  Patch,
+  Body,
 } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -25,10 +31,7 @@ export class ReportsController {
   }
 
   @Patch(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateReportStatusDto,
-  ) {
+  updateStatus(@Param('id') id: string, @Body() dto: UpdateReportStatusDto) {
     return this.service.updateStatus(id, dto.status);
   }
 }
