@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import InternProfileView from '@/components/intern-profile-view';
+import InternProfileView from '@/components/InternProfileView';
 import { interns, roleToUserMap } from '@/lib/mock-data';
 
 export default function InternProfilePage() {

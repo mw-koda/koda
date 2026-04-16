@@ -8,6 +8,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { PerformanceModule } from './performance/performance.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { WebhookModule } from './webhook/webhook.module';
+import { TeamsModule } from './teams/teams.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { WebhookModule } from './webhook/webhook.module';
     PerformanceModule,
     DashboardModule,
     WebhookModule,
+    TeamsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

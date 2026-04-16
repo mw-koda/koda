@@ -1,24 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { getAttendanceByInternId, interns, issues, reports } from '@/lib/mock-data';
 import {
-  TrendingUp,
-  TrendingDown,
-  Users,
-  FileText,
-  GitPullRequest,
-  Target,
+    FileText,
+    GitPullRequest,
+    TrendingDown,
+    TrendingUp,
+    Users,
 } from 'lucide-react';
-import { interns, issues, reports, performanceData, mockAuthConfig } from '@/lib/mock-data';
-import { JoinOrganizationCard } from '@/components/join-organization-card';
 import Link from 'next/link';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-// --- ADDED IMPORT ---
-import JoinTeamModal from '../../admin/batches/join-team-modal/modal';
 
 function StatCard({
   title,
@@ -88,25 +81,29 @@ function formatTimestamp(timestamp: string) {
   return 'just now';
 }
 
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatDuration(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+}
+
 export default function InternDashboardPage() {
-  const [currentRole, setCurrentRole] = useState<string>(mockAuthConfig.role);
-  const [userOrganizationId, setUserOrganizationId] = useState<string | undefined>(mockAuthConfig.organizationId);
-  
-  // --- ADDED STATE FOR MODAL ---
-  const [showJoinModal, setShowJoinModal] = useState(false);
-
-  useEffect(() => {
-    const role = localStorage.getItem('selectedRole') || mockAuthConfig.role;
-    const orgId = localStorage.getItem('userOrganizationId') || mockAuthConfig.organizationId;
-    setCurrentRole(role);
-    setUserOrganizationId(orgId || undefined);
-
-    // --- LOGIC: Trigger modal if intern is unassigned ---
-    if (role === 'intern' && !orgId) {
-      setShowJoinModal(true);
-    }
-  }, []);
-
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -116,9 +113,6 @@ export default function InternDashboardPage() {
 
   const pendingReports = reports.filter((r) => r.status === 'pending').length;
   const openIssues = issues.filter((i) => i.status === 'open').length;
-  const avgScore =
-    reports.filter((r) => r.score !== null).reduce((acc, r) => acc + (r.score || 0), 0) /
-    reports.filter((r) => r.score !== null).length;
 
   const recentIssues = [...issues]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -133,16 +127,10 @@ export default function InternDashboardPage() {
         <p className="text-text-muted">{today}</p>
       </div>
 
-      {/* Show Join Organization card for interns without an organization */}
+      {/* Show Join Organization card for interns without an organization
       {currentRole === 'intern' && (
         <JoinOrganizationCard currentOrganizationId={userOrganizationId} />
-      )}
-
-      {/* --- ADDED MODAL COMPONENT --- */}
-      <JoinTeamModal 
-        isOpen={showJoinModal} 
-        onClose={() => setShowJoinModal(false)} 
-      />
+      )} */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
@@ -166,13 +154,7 @@ export default function InternDashboardPage() {
           icon={GitPullRequest}
           trend="up"
         />
-        <StatCard
-          title="Avg Performance Score"
-          value={`${avgScore.toFixed(1)}%`}
-          change="+2.4% from last period"
-          icon={Target}
-          trend="up"
-        />
+ 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -219,50 +201,123 @@ export default function InternDashboardPage() {
         </Card>
 
         <Card className="bg-bg-surface border-border-color p-6">
-          <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
-            Performance Overview
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={performanceData}>
-              <defs>
-                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4DFFA3" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#4DFFA3" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#252830" />
-              <XAxis
-                dataKey="week"
-                stroke="#6B7280"
-                style={{ fontSize: '12px', fontFamily: 'IBM Plex Mono' }}
-              />
-              <YAxis
-                stroke="#6B7280"
-                style={{ fontSize: '12px', fontFamily: 'IBM Plex Mono' }}
-                domain={[70, 100]}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1C2029',
-                  border: '1px solid #252830',
-                  borderRadius: '8px',
-                  fontFamily: 'DM Sans',
-                }}
-                labelStyle={{ color: '#E8EAF0' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="score"
-                stroke="#4DFFA3"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorScore)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-mono font-semibold text-text-primary">
+                Attendance Log
+              </h2>
+              <p className="text-xs text-text-muted mt-1">
+                Total Hours/Minutes Served
+              </p>
+              <p className="text-2xl font-mono font-semibold text-text-primary mt-2">
+                {formatDuration(
+                  interns.reduce(
+                    (total, intern) =>
+                      total +
+                      getAttendanceByInternId(intern.id).reduce(
+                        (sum, log) => sum + log.minutesWorked,
+                        0
+                      ),
+                    0
+                  )
+                )}
+              </p>
+            </div>
+            <button className="px-3 py-1.5 text-xs font-semibold text-text-primary border border-border-color rounded-md hover:bg-bg-elevated transition-colors">
+              Export
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {interns.length > 0 && getAttendanceByInternId(interns[0].id).length > 0 ? (
+              [...getAttendanceByInternId(interns[0].id)]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 5)
+                .map((log) => (
+                  <div
+                    key={log.id}
+                    className="p-4 bg-bg-elevated rounded-lg border border-border-color"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-text-primary">
+                        {formatDate(log.date)}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-accent-primary/10 text-accent-primary border-accent-primary/30"
+                      >
+                        {formatDuration(log.minutesWorked)}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                      <div>
+                        <p className="text-xs text-text-muted">In</p>
+                        <p className="text-sm text-text-primary font-mono">
+                          {formatTime(log.clockIn)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-muted">Out</p>
+                        <p className="text-sm text-text-primary font-mono">
+                          {formatTime(log.clockOut)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 mt-3">
+                      <p className="text-xs text-text-muted">
+                        {log.location}
+                      </p>
+                      <button className="px-2.5 py-1 text-xs font-semibold text-accent-primary border border-accent-primary/30 rounded-md hover:bg-accent-primary/10 transition-colors">
+                        View EOD
+                      </button>
+                    </div>
+                  </div>
+                ))
+            ) : (
+              <p className="text-sm text-text-muted text-center py-6">
+                No attendance logs found.
+              </p>
+            )}
+          </div>
         </Card>
       </div>
 
+
+      <Card className="bg-bg-surface border-border-color p-6 mb-8">
+        <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
+          Attendance Log Summary
+        </h2>
+        <div className="space-y-3">
+          {interns.map((intern) => (
+            <div
+              key={intern.id}
+              className="p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Avatar className="h-8 w-8 bg-bg-base border border-border-color flex-shrink-0">
+                    <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono text-xs font-semibold">
+                      {intern.avatarInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">
+                      {intern.name}
+                    </p>
+                    <p className="text-xs text-text-muted">{intern.role}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 ml-2">
+              
+                  <span className="text-xs text-text-muted font-mono">
+                    {intern.lastActive}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
       <Card className="bg-bg-surface border-border-color p-6">
         <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
           Intern Status Summary

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { auth } from '@/lib/auth';
+import { useEffect, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -13,6 +13,10 @@ export type CurrentUser = {
   github_username: string;
   avatar_url: string | null;
   is_onboarded: boolean;
+  batchId?: string | null;
+  batch_id?: string | null;
+  school?: string | null;
+  school_name?: string | null;
 };
 
 export function useCurrentUser() {

@@ -1,19 +1,20 @@
 'use client';
- 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Card } from '@/components/ui/card';
+
+import JoinBatchGatekeeperModal from '@/components/join-batch-gatekeeper-modal';
 import { Badge } from '@/components/ui/badge';
-import { interns, issues, attendanceLogs, getAttendanceByInternId } from '@/lib/mock-data';
+import { Card } from '@/components/ui/card';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { attendanceLogs, getAttendanceByInternId, interns, issues } from '@/lib/mock-data';
 import {
-  Users,
-  FileText,
-  GitPullRequest,
-  Target,
-  TrendingUp,
-  TrendingDown,
-  Clock,
+    Clock,
+    FileText,
+    GitPullRequest,
+    TrendingDown,
+    TrendingUp,
+    Users
 } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
  
 function getReportStatusClass(status: string) {
   switch (status) {
@@ -79,12 +80,39 @@ function timeAgo(dateStr: string) {
  
 export default function CoordinatorDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
+  const [persistedSchool, setPersistedSchool] = useState<string | null>(null);
+  const [hasBatchAssignment, setHasBatchAssignment] = useState(false);
+  const { user, isLoading } = useCurrentUser();
  
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted || isLoading) {
+      return;
+    }
+
+    const localSchool = localStorage.getItem('userSchool');
+    const localBatchId = localStorage.getItem('userBatchId');
+    const assignedBatchId = user?.batchId ?? user?.batch_id ?? localBatchId;
+
+    setPersistedSchool(localSchool);
+    setHasBatchAssignment(Boolean(assignedBatchId));
+  }, [isLoading, isMounted, user]);
+
+  const school = useMemo(() => {
+    return user?.school ?? user?.school_name ?? persistedSchool ?? 'School not assigned';
+  }, [persistedSchool, user]);
+
+  const handleJoinBatch = async ({ batchCode, school: schoolName }: { batchCode: string; school: string }) => {
+    localStorage.setItem('userBatchId', batchCode.trim());
+    localStorage.setItem('userSchool', schoolName.trim());
+    setPersistedSchool(schoolName.trim());
+    setHasBatchAssignment(true);
+  };
  
-  if (!isMounted) {
+  if (!isMounted || isLoading) {
     return <div className="p-8 text-text-muted">Loading dashboard...</div>;
   }
  
@@ -95,7 +123,6 @@ export default function CoordinatorDashboardPage() {
     day: 'numeric',
   });
  
-  const school = 'Cebu Institute of Technology University'; // Replace with actual school data
   const pendingReports = interns.filter((i) => i.reportStatus === 'pending');
   const openIssues = issues.filter((i) => i.status === 'open');
   const avgScore = Math.round(
@@ -124,6 +151,11 @@ export default function CoordinatorDashboardPage() {
  
   return (
     <div className="p-8">
+      <JoinBatchGatekeeperModal
+        isOpen={!hasBatchAssignment}
+        roleLabel="Coordinator"
+        onJoin={handleJoinBatch}
+      />
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">

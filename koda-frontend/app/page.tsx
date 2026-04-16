@@ -12,7 +12,7 @@ export default function Home() {
     const selectedRole = typeof window !== 'undefined' && localStorage.getItem('selectedRole');
     
     if (selectedRole) {
-      const normalizedRole = selectedRole === 'team_lead' ? 'coordinator' : selectedRole;
+      const normalizedRole = selectedRole === 'team_lead' ? 'admin' : selectedRole;
       // User is logged in, redirect to role-specific dashboard
       if (normalizedRole in roleRedirects) {
         router.push(roleRedirects[normalizedRole as keyof typeof roleRedirects]);

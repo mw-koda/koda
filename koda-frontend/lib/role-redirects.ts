@@ -4,5 +4,5 @@ export const roleRedirects: Record<AppRole, string> = {
   intern: '/interns/dashboard',
   coordinator: '/coordinator/dashboard',
   admin: '/admin/dashboard',
-  team_lead: '/coordinator/dashboard',
+  team_lead: '/admin/dashboard',
 };

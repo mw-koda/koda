@@ -1,8 +1,6 @@
 'use client';
 
-import { auth } from '@/lib/auth';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { requestJson } from '@/lib/api/client';
 
 export interface BatchSummary {
   id: string;
@@ -52,68 +50,39 @@ export interface UpdateBatchPayload {
 export interface AssignInternsPayload {
   internIds: string[];
 }
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `API error: ${response.status}`);
-  }
-  return response.json();
-}
-
 export const batchesApi = {
   async create(payload: CreateBatchPayload): Promise<BatchDetail> {
-    const response = await fetch(`${API_BASE_URL}/batches`, {
+    return requestJson<BatchDetail>('/batches', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...auth.headers(),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    return handleResponse(response);
   },
 
   async findAll(search?: string): Promise<BatchSummary[]> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
 
-    const response = await fetch(`${API_BASE_URL}/batches?${params}`, {
-      method: 'GET',
-      headers: auth.headers(),
-    });
-    return handleResponse(response);
+    return requestJson<BatchSummary[]>(`/batches?${params}`);
   },
 
   async findOne(id: string): Promise<BatchDetail> {
-    const response = await fetch(`${API_BASE_URL}/batches/${id}`, {
-      method: 'GET',
-      headers: auth.headers(),
-    });
-    return handleResponse(response);
+    return requestJson<BatchDetail>(`/batches/${id}`);
   },
 
   async update(id: string, payload: UpdateBatchPayload): Promise<BatchDetail> {
-    const response = await fetch(`${API_BASE_URL}/batches/${id}`, {
+    return requestJson<BatchDetail>(`/batches/${id}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...auth.headers(),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    return handleResponse(response);
   },
 
   async assignInterns(id: string, payload: AssignInternsPayload): Promise<BatchDetail> {
-    const response = await fetch(`${API_BASE_URL}/batches/${id}/interns`, {
+    return requestJson<BatchDetail>(`/batches/${id}/interns`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...auth.headers(),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    return handleResponse(response);
   },
 };

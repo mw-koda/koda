@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users } from 'lucide-react';
+import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users, Plus } from 'lucide-react'; // Added Plus icon
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { batchesApi, type BatchDetail } from '@/lib/api/batches';
+import { teamsApi, type TeamDetail } from '@/lib/api/teams';
+import CreateTeamModal from '../create-team-modal/modal'; // Adjust path based on your folder structure
+import type { TeamDetail } from '@/lib/api/teams';
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -53,20 +56,23 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
   const [batch, setBatch] = useState<BatchDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [teams, setTeams] = useState<TeamDetail[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
+  
+  // 1. Add State for the Modal
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isMounted) {
-      return;
-    }
+    if (!isMounted) return;
 
     const loadBatch = async () => {
       setIsLoading(true);
       setError(null);
-
       try {
         const data = await batchesApi.findOne(params.id);
         setBatch(data);
@@ -81,11 +87,32 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
     void loadBatch();
   }, [isMounted, params.id]);
 
-  if (!isMounted) {
-    return <div className="p-8 text-text-muted">Loading batch details...</div>;
-  }
+  useEffect(() => {
+    if (!isMounted) return;
 
-  if (isLoading) {
+    const loadTeams = async () => {
+      setTeamsLoading(true);
+      setTeamsError(null);
+      try {
+        const data = await teamsApi.findMine();
+        setTeams(data);
+      } catch (requestError) {
+        setTeams([]);
+        setTeamsError(requestError instanceof Error ? requestError.message : 'Failed to load teams.');
+      } finally {
+        setTeamsLoading(false);
+      }
+    };
+
+    void loadTeams();
+  }, [isMounted]);
+
+  // 2. Add Success Handler
+  const handleTeamCreated = (team: TeamDetail) => {
+    setTeams((prev) => [team, ...prev]);
+  };
+
+  if (!isMounted || isLoading) {
     return <div className="p-8 text-text-muted">Loading batch details...</div>;
   }
 
@@ -95,23 +122,6 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
   const daysRemaining = getDaysRemaining(batch.endDate);
   const totalInterns = batch.assignedInterns.length;
-  
-  // Build team map from assigned interns
-  const teamMap = batch.assignedInterns.reduce((acc, intern) => {
-    const teamId = intern.teamId;
-    if (!teamId) return acc; // Skip interns without team assignment
-    
-    const entry = acc.get(teamId) || { teamId, internCount: 0 };
-    entry.internCount += 1;
-    acc.set(teamId, entry);
-    return acc;
-  }, new Map<string, { teamId: string; internCount: number }>());
-  
-  const teamSummaries = Array.from(teamMap.values()).map((team) => ({
-    id: team.teamId,
-    internCount: team.internCount,
-    progress: 0, // Placeholder - teams need individual progress tracking
-  }));
 
   return (
     <div className="p-8 space-y-8">
@@ -128,12 +138,14 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           </p>
         </div>
 
-        <Button asChild variant="ghost" className="text-text-primary hover:bg-bg-elevated hover:text-text-primary">
-          <Link href="/admin/batches">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Batches
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button asChild variant="ghost" className="text-text-primary hover:bg-bg-elevated hover:text-text-primary">
+            <Link href="/admin/batches">
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back to Batches
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -193,52 +205,83 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="space-y-2">
               <CardTitle className="text-xl font-display text-text-primary">
-                Assigned Interns
+                Teams in this batch
               </CardTitle>
               <CardDescription className="text-text-muted">
-                View all interns assigned to this batch.
+                Current team distribution and progress overview for this cohort.
               </CardDescription>
             </div>
+            <Button
+              onClick={() => setIsTeamModalOpen(true)}
+              className="bg-accent-primary/90 hover:bg-accent-secondary text-bg-base gap-2 px-6 shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Create team
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {totalInterns === 0 ? (
+          {teamsLoading ? (
             <div className="rounded-xl border border-border-color bg-bg-elevated p-6 text-text-muted">
-              No interns are assigned to this batch yet.
+              Loading teams...
+            </div>
+          ) : teamsError ? (
+            <div className="rounded-xl border border-border-color bg-bg-elevated p-6 text-text-muted">
+              {teamsError}
+            </div>
+          ) : teams.length === 0 ? (
+            <div className="rounded-xl border border-border-color bg-bg-elevated p-6 text-text-muted">
+              No teams created for this batch yet.
             </div>
           ) : (
-            <div className="space-y-3">
-              {batch.assignedInterns.map((intern) => (
-                <div
-                  key={intern.id}
-                  className="rounded-lg border border-border-color bg-bg-elevated p-4 hover:border-accent-primary/40 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-text-primary">
-                        {intern.name || 'Unnamed Intern'}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {teams.map((team) => {
+                const assignedUserIds = new Set(
+                  batch.assignedInterns
+                    .map((intern) => intern.userId)
+                    .filter((id): id is string => Boolean(id))
+                );
+                const teamInternCount = team.members.filter(
+                  (member) =>
+                    member.role === 'intern' &&
+                    member.userId &&
+                    assignedUserIds.has(member.userId)
+                ).length;
+                const progress = Math.min(
+                  100,
+                  Math.round((teamInternCount / Math.max(totalInterns, 1)) * 100)
+                );
+
+                return (
+                  <Link key={team.id} href={`/admin/teams/${team.id}/dashboard`} className="group">
+                    <div className="rounded-xl border border-border-color bg-bg-elevated p-5 transition-colors hover:border-accent-primary/40">
+                      <p className="text-sm font-semibold text-text-primary">
+                        {team.name}
                       </p>
-                      <p className="text-sm text-text-muted">
-                        {intern.email || 'No email'}
+                      <p className="mt-2 text-xs text-text-muted">
+                        {teamInternCount} interns | Overall Project Progress
                       </p>
-                      {intern.githubUsername && (
-                        <p className="text-sm text-text-muted">
-                          @{intern.githubUsername}
+                      <div className="mt-4">
+                        <Progress value={progress} className="h-2" />
+                        <p className="mt-2 text-xs text-text-muted">
+                          {progress}% complete
                         </p>
-                      )}
+                      </div>
                     </div>
-                    <div className="text-right text-sm text-text-muted">
-                      {intern.assignedAt && (
-                        <p>Assigned {formatDate(intern.assignedAt)}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* 4. Render the Modal */}
+      <CreateTeamModal 
+        isOpen={isTeamModalOpen}
+        onClose={() => setIsTeamModalOpen(false)}
+        onSuccess={handleTeamCreated}
+      />
     </div>
   );
 }
