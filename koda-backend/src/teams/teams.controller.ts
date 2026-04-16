@@ -23,35 +23,44 @@ import { TeamsService } from './teams.service';
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
+  @Get()
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  findMine(@CurrentUser() user: UserRecord) {
+    return this.teamsService.findMine(user.id, user.role);
+  }
+
   @Post()
-  @Roles(Role.COORDINATOR, Role.TEAM_LEAD)
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
   create(
     @Body() createTeamDto: CreateTeamDto,
     @CurrentUser() user: UserRecord,
   ) {
-    return this.teamsService.create(createTeamDto, user.id);
+    return this.teamsService.create(createTeamDto, user.id, user.role);
   }
 
   @Post(':id/members')
-  @Roles(Role.COORDINATOR, Role.TEAM_LEAD)
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
   addMember(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() addTeamMemberDto: AddTeamMemberDto,
+    @CurrentUser() user: UserRecord,
   ) {
-    return this.teamsService.addMember(id, addTeamMemberDto);
+    return this.teamsService.addMember(id, addTeamMemberDto, user.id, user.role);
   }
 
   @Delete(':id/members/:userId')
-  @Roles(Role.COORDINATOR, Role.TEAM_LEAD)
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
   removeMember(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() user: UserRecord,
   ) {
-    return this.teamsService.removeMember(id, userId);
+    return this.teamsService.removeMember(id, userId, user.id, user.role);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.teamsService.findOne(id);
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: UserRecord) {
+    return this.teamsService.findOne(id, user.id, user.role);
   }
 }

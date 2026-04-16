@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -63,18 +64,20 @@ export class TeamsService {
   async create(
     createTeamDto: CreateTeamDto,
     creatorId: string,
+    creatorRole: Role,
   ): Promise<TeamDetail> {
     const teamName = createTeamDto.name?.trim();
     if (!teamName) {
       throw new BadRequestException('Team name is required.');
     }
 
-    const creator = await this.getUserOrThrow(creatorId);
-    if (creator.role !== Role.TEAM_LEAD && creator.role !== Role.COORDINATOR) {
+    if (!this.canManageTeams(creatorRole)) {
       throw new BadRequestException(
-        'Only users with team_lead or coordinator role can create teams.',
+        'Only users with admin or team_lead role can create teams.',
       );
     }
+
+    await this.getUserOrThrow(creatorId);
 
     const supabase = this.supabaseService.getClient();
     const result = (await supabase
@@ -95,11 +98,37 @@ export class TeamsService {
       );
     }
 
-    return this.findOne(result.data.id);
+    if (createTeamDto.teamLeadId) {
+      const assignedLead = await this.getUserOrThrow(createTeamDto.teamLeadId);
+      if (assignedLead.role !== Role.TEAM_LEAD) {
+        throw new BadRequestException('Assigned team lead must have team_lead role.');
+      }
+
+      const addLeadResult = (await supabase
+        .from('team_members')
+        .insert({
+          team_id: result.data.id,
+          user_id: createTeamDto.teamLeadId,
+          role: Role.TEAM_LEAD,
+        })) as unknown as {
+        error: { message: string } | null;
+      };
+
+      if (addLeadResult.error) {
+        throw new BadRequestException(addLeadResult.error.message);
+      }
+    }
+
+    return this.findOne(result.data.id, creatorId, creatorRole);
   }
 
-  async addMember(teamId: string, dto: AddTeamMemberDto): Promise<TeamDetail> {
-    await this.getTeamOrThrow(teamId);
+  async addMember(
+    teamId: string,
+    dto: AddTeamMemberDto,
+    actorId: string,
+    actorRole: Role,
+  ): Promise<TeamDetail> {
+    await this.assertCanManageTeam(teamId, actorId, actorRole);
     await this.getUserOrThrow(dto.userId);
 
     const supabase = this.supabaseService.getClient();
@@ -140,11 +169,16 @@ export class TeamsService {
       );
     }
 
-    return this.findOne(teamId);
+    return this.findOne(teamId, actorId, actorRole);
   }
 
-  async removeMember(teamId: string, userId: string): Promise<TeamDetail> {
-    await this.getTeamOrThrow(teamId);
+  async removeMember(
+    teamId: string,
+    userId: string,
+    actorId: string,
+    actorRole: Role,
+  ): Promise<TeamDetail> {
+    await this.assertCanManageTeam(teamId, actorId, actorRole);
 
     const supabase = this.supabaseService.getClient();
     const deleteResult = (await supabase
@@ -166,10 +200,11 @@ export class TeamsService {
       throw new NotFoundException('Team member not found.');
     }
 
-    return this.findOne(teamId);
+    return this.findOne(teamId, actorId, actorRole);
   }
 
-  async findOne(id: string): Promise<TeamDetail> {
+  async findOne(id: string, actorId: string, actorRole: Role): Promise<TeamDetail> {
+    await this.assertCanManageTeam(id, actorId, actorRole);
     const team = await this.getTeamOrThrow(id);
 
     const supabase = this.supabaseService.getClient();
@@ -215,6 +250,29 @@ export class TeamsService {
     };
   }
 
+  async findMine(actorId: string, actorRole: Role): Promise<TeamDetail[]> {
+    if (!this.canManageTeams(actorRole)) {
+      throw new ForbiddenException('You are not allowed to manage teams.');
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const teamsResult = (await supabase
+      .from('teams')
+      .select('id')
+      .eq('created_by', actorId)
+      .order('created_at', { ascending: false })) as unknown as {
+      data: Array<{ id: string }> | null;
+      error: { message: string } | null;
+    };
+
+    if (teamsResult.error) {
+      throw new BadRequestException(teamsResult.error.message);
+    }
+
+    const teamIds = (teamsResult.data ?? []).map((team) => team.id);
+    return Promise.all(teamIds.map((id) => this.findOne(id, actorId, actorRole)));
+  }
+
   private async getTeamOrThrow(id: string): Promise<TeamRow> {
     const supabase = this.supabaseService.getClient();
     const result = (await supabase
@@ -251,5 +309,24 @@ export class TeamsService {
     }
 
     return result.data;
+  }
+
+  private canManageTeams(role: Role): boolean {
+    return role === Role.ADMIN || role === Role.TEAM_LEAD;
+  }
+
+  private async assertCanManageTeam(
+    teamId: string,
+    actorId: string,
+    actorRole: Role,
+  ): Promise<void> {
+    if (!this.canManageTeams(actorRole)) {
+      throw new ForbiddenException('Only admins and team leads can manage teams.');
+    }
+
+    const team = await this.getTeamOrThrow(teamId);
+    if (team.created_by !== actorId) {
+      throw new ForbiddenException('You can only manage teams you created.');
+    }
   }
 }

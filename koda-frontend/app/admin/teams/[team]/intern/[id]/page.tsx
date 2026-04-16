@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import InternProfileView from '@/components/intern-profile-view';
+import InternProfileView from '@/components/InternProfileView';
 import { interns } from '@/lib/mock-data';
 import { deslugifyTeamName, slugifyTeamName } from '@/lib/team-utils';
 

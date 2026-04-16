@@ -21,11 +21,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getUsers, type ApiUser } from "@/lib/api/users";
+import { teamsApi, type TeamDetail } from '@/lib/api/teams';
 
 interface CreateTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (payload: any) => void;
+  onSuccess: (team: TeamDetail) => void;
 }
 
 export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalProps) {
@@ -33,6 +34,7 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
   const [adminUsers, setAdminUsers] = useState<ApiUser[]>([]);
   const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
   const [adminLoadError, setAdminLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [teamLeadId, setTeamLeadId] = useState('');
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
       try {
         setIsLoadingAdmins(true);
         setAdminLoadError(null);
-        const admins = await getUsers({ role: 'admin' });
+        const admins = await getUsers({ role: 'team_lead' });
 
         if (!isMounted) {
           return;
@@ -79,6 +81,7 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setSubmitError(null);
 
     const formData = new FormData(e.currentTarget);
     
@@ -86,18 +89,19 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
     const payload = {
       name: formData.get('name') as string,
       description: formData.get('description') as string,
-      teamLeadId,
+      teamLeadId: teamLeadId || undefined,
       maxInterns: parseInt(formData.get('maxInterns') as string, 10),
     };
 
-    // Simulate API call (Replace with your actual teamsApi.create call later)
-    console.log('Finalizing Team Initialization:', payload);
-    
-    setTimeout(() => {
-      setIsSubmitting(false);
-      onSuccess(payload);
+    try {
+      const team = await teamsApi.create(payload);
+      onSuccess(team);
       onClose();
-    }, 800);
+    } catch (error: unknown) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to create team.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -164,12 +168,12 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
                 <SelectValue
                   placeholder={
                     isLoadingAdmins
-                      ? "Loading admins..."
+                        ? "Loading team leads..."
                       : adminLoadError
-                      ? "Unable to load admins"
+                        ? "Unable to load team leads"
                       : adminUsers.length
                       ? "Select team lead"
-                      : "No admins available"
+                        : "No team leads available"
                   }
                 />
               </SelectTrigger>
@@ -203,6 +207,9 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
           </div>
 
           <DialogFooter className="pt-4 gap-2 sm:gap-0">
+            {submitError && (
+              <p className="w-full text-sm text-accent-secondary">{submitError}</p>
+            )}
             <Button
               type="button"
               variant="ghost"

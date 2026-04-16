@@ -31,7 +31,7 @@ export default function AuthCallbackPage() {
         return res.json() as Promise<{ user: { role: string; is_onboarded: boolean } }>;
       })
       .then(({ user }) => {
-        const normalizedRole = user.role === 'team_lead' ? 'coordinator' : user.role;
+        const normalizedRole = user.role === 'team_lead' ? 'admin' : user.role;
         localStorage.setItem('selectedRole', normalizedRole);
 
         router.replace(roleRedirects[normalizedRole] ?? '/dashboard');

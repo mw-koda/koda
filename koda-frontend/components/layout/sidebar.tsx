@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -36,8 +37,16 @@ function isAdminNavItemActive(pathname: string, href: string) {
 export function Sidebar() {
   const pathname = usePathname();
   const { user, isLoading } = useCurrentUser();
-  const normalizedRole = user?.role === 'team_lead' ? 'coordinator' : user?.role;
-  const currentRole = normalizedRole ?? 'coordinator';
+  const [storedRole, setStoredRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setStoredRole(localStorage.getItem('selectedRole'));
+  }, []);
+
+  const rawRole = user?.role ?? storedRole ?? 'coordinator';
+  const normalizedRole = rawRole === 'team_lead' ? 'admin' : rawRole;
+  const currentRole = normalizedRole;
 
   if (isLoading) {
     return (
