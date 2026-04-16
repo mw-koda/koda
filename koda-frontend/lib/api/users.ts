@@ -33,7 +33,6 @@ export interface UpdateUserRequest {
   role?: ApiUserRole;
   status?: ApiUserStatus;
 }
-
 export async function getUsers(filters?: GetUsersFilters): Promise<ApiUser[]> {
   const query = new URLSearchParams();
 

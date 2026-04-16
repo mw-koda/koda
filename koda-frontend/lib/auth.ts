@@ -1,4 +1,15 @@
 const TOKEN_KEY = 'koda_token';
+const LOGIN_PATH = '/login';
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (window.location.pathname !== LOGIN_PATH) {
+    window.location.href = LOGIN_PATH;
+  }
+}
 
 export const auth = {
   setToken(token: string) {
@@ -20,6 +31,17 @@ export const auth = {
     sessionStorage.clear();
   },
 
+  logoutAndRedirect() {
+    this.clearSession();
+    redirectToLogin();
+  },
+
+  handleAuthFailure(status?: number) {
+    if (status === undefined || status === 401 || status === 403) {
+      this.logoutAndRedirect();
+    }
+  },
+
   isAuthenticated(): boolean {
     return !!localStorage.getItem(TOKEN_KEY);
   },
@@ -27,6 +49,11 @@ export const auth = {
   /** Attach to fetch calls: fetch(url, { headers: auth.headers() }) */
   headers(): Record<string, string> {
     const token = localStorage.getItem(TOKEN_KEY);
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    if (!token) {
+      this.logoutAndRedirect();
+      return {};
+    }
+
+    return { Authorization: `Bearer ${token}` };
   },
 };

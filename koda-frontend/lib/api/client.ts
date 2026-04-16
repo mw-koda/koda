@@ -59,6 +59,7 @@ export async function requestJson<T>(
   });
 
   if (!response.ok) {
+    auth.handleAuthFailure(response.status);
     throw await parseError(response);
   }
 

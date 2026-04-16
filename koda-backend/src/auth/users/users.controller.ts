@@ -25,19 +25,19 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post('onboard')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
   async onboardUser(@Body() dto: OnboardUserDto): Promise<UserRecord> {
     return this.usersService.onboardUser(dto);
   }
   
   @Get()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
   async getUsers(@Query() query: GetUsersQueryDto): Promise<UserRecord[]> {
     return this.usersService.getUsers(query);
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
   async updateUser(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,

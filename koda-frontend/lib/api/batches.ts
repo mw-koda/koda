@@ -50,7 +50,6 @@ export interface UpdateBatchPayload {
 export interface AssignInternsPayload {
   internIds: string[];
 }
-
 export const batchesApi = {
   async create(payload: CreateBatchPayload): Promise<BatchDetail> {
     return requestJson<BatchDetail>('/batches', {

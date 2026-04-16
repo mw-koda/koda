@@ -36,7 +36,6 @@ export interface AddTeamMemberPayload {
   userId: string;
   role: 'admin' | 'coordinator' | 'intern' | 'team_lead';
 }
-
 export const teamsApi = {
   async create(payload: CreateTeamPayload): Promise<TeamDetail> {
     return requestJson<TeamDetail>('/teams', {
