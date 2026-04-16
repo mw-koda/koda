@@ -1,6 +1,4 @@
-import { auth } from '@/lib/auth';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { requestJson } from '@/lib/api/client';
 
 export type ApiUserRole = 'admin' | 'coordinator' | 'intern' | 'team_lead';
 export type ApiUserStatus = 'active' | 'pending' | 'inactive';
@@ -36,44 +34,6 @@ export interface UpdateUserRequest {
   status?: ApiUserStatus;
 }
 
-function buildUrl(path: string): string {
-  return `${API_URL}${path}`;
-}
-
-function buildAuthHeaders(extra: Record<string, string> = {}): Record<string, string> {
-  return {
-    ...auth.headers(),
-    ...extra,
-  };
-}
-
-async function parseJson<T>(response: Response): Promise<T> {
-  if (response.ok) {
-    return response.json() as Promise<T>;
-  }
-
-  let message = `Request failed (${response.status})`;
-
-  try {
-    const errorBody = (await response.json()) as {
-      message?: string | string[];
-      error?: string;
-    };
-
-    if (Array.isArray(errorBody.message)) {
-      message = errorBody.message.join(', ');
-    } else if (typeof errorBody.message === 'string') {
-      message = errorBody.message;
-    } else if (typeof errorBody.error === 'string') {
-      message = errorBody.error;
-    }
-  } catch {
-    // Ignore JSON parse errors and use fallback message.
-  }
-
-  throw new Error(message);
-}
-
 export async function getUsers(filters?: GetUsersFilters): Promise<ApiUser[]> {
   const query = new URLSearchParams();
 
@@ -86,32 +46,24 @@ export async function getUsers(filters?: GetUsersFilters): Promise<ApiUser[]> {
   }
 
   const querySuffix = query.toString() ? `?${query.toString()}` : '';
-  const response = await fetch(buildUrl(`/users${querySuffix}`), {
-    headers: buildAuthHeaders(),
-  });
-
-  return parseJson<ApiUser[]>(response);
+  return requestJson<ApiUser[]>(`/users${querySuffix}`);
 }
 
 export async function onboardUser(payload: OnboardUserRequest): Promise<ApiUser> {
-  const response = await fetch(buildUrl('/users/onboard'), {
+  return requestJson<ApiUser>('/users/onboard', {
     method: 'POST',
-    headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-
-  return parseJson<ApiUser>(response);
 }
 
 export async function updateUser(
   userId: string,
   payload: UpdateUserRequest,
 ): Promise<ApiUser> {
-  const response = await fetch(buildUrl(`/users/${userId}`), {
+  return requestJson<ApiUser>(`/users/${userId}`, {
     method: 'PATCH',
-    headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-
-  return parseJson<ApiUser>(response);
 }

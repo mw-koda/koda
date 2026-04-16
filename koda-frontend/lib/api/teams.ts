@@ -1,6 +1,4 @@
-import { auth } from '@/lib/auth';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+import { requestJson } from '@/lib/api/client';
 
 export interface TeamMember {
   id: string;
@@ -39,84 +37,34 @@ export interface AddTeamMemberPayload {
   role: 'admin' | 'coordinator' | 'intern' | 'team_lead';
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (response.ok) {
-    return response.json() as Promise<T>;
-  }
-
-  let message = `Request failed (${response.status})`;
-
-  try {
-    const errorBody = (await response.json()) as {
-      message?: string | string[];
-      error?: string;
-    };
-
-    if (Array.isArray(errorBody.message)) {
-      message = errorBody.message.join(', ');
-    } else if (typeof errorBody.message === 'string') {
-      message = errorBody.message;
-    } else if (typeof errorBody.error === 'string') {
-      message = errorBody.error;
-    }
-  } catch {
-    // Ignore JSON parse errors and keep fallback message.
-  }
-
-  throw new Error(message);
-}
-
 export const teamsApi = {
   async create(payload: CreateTeamPayload): Promise<TeamDetail> {
-    const response = await fetch(`${API_BASE_URL}/teams`, {
+    return requestJson<TeamDetail>('/teams', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...auth.headers(),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
-    return handleResponse<TeamDetail>(response);
   },
 
   async findOne(id: string): Promise<TeamDetail> {
-    const response = await fetch(`${API_BASE_URL}/teams/${id}`, {
-      method: 'GET',
-      headers: auth.headers(),
-    });
-
-    return handleResponse<TeamDetail>(response);
+    return requestJson<TeamDetail>(`/teams/${id}`);
   },
 
   async findMine(): Promise<TeamDetail[]> {
-    const response = await fetch(`${API_BASE_URL}/teams`, {
-      method: 'GET',
-      headers: auth.headers(),
-    });
-
-    return handleResponse<TeamDetail[]>(response);
+    return requestJson<TeamDetail[]>('/teams');
   },
 
   async addMember(teamId: string, payload: AddTeamMemberPayload): Promise<TeamDetail> {
-    const response = await fetch(`${API_BASE_URL}/teams/${teamId}/members`, {
+    return requestJson<TeamDetail>(`/teams/${teamId}/members`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...auth.headers(),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
-    return handleResponse<TeamDetail>(response);
   },
 
   async removeMember(teamId: string, userId: string): Promise<TeamDetail> {
-    const response = await fetch(`${API_BASE_URL}/teams/${teamId}/members/${userId}`, {
+    return requestJson<TeamDetail>(`/teams/${teamId}/members/${userId}`, {
       method: 'DELETE',
-      headers: auth.headers(),
     });
-
-    return handleResponse<TeamDetail>(response);
   },
 };
