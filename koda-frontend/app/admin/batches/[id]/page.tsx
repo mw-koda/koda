@@ -8,8 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { batchesApi, type BatchDetail } from '@/lib/api/batches';
 import { teamsApi, type TeamDetail } from '@/lib/api/teams';
-import CreateTeamModal from '../create-team-modal/modal'; // Adjust path based on your folder structure
-import type { TeamDetail } from '@/lib/api/teams';
+import CreateTeamModal from '../create-team-modal/modal';
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat('en-US', {

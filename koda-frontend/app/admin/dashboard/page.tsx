@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react'; // Added for error state
@@ -23,6 +24,7 @@ function getUserStatusClass(status: string) {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -170,7 +172,12 @@ export default function AdminDashboardPage() {
       {/* Onboarding Modal triggers if batches.length is 0. 
          Wait for isLoading to be false before showing to avoid "pop-in" 
       */}
-      {!isLoading && <AdminOnboardingView isOpen={showOnboarding} />}
+      {!isLoading && (
+        <AdminOnboardingView 
+          isOpen={showOnboarding} 
+          onOpenBatchCreate={() => router.push('/admin/batches')}
+        />
+      )}
     </div>
   );
 }

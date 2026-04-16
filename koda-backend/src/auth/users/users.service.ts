@@ -47,7 +47,7 @@ export class UsersService {
         .eq('id', existingResponse.data.id)
         .select(USER_SELECT_FIELDS)
         .single();
-        
+
       if (updateResponse.error || updateResponse.data === null) {
         this.logger.error(
           'Failed to update existing user during onboarding',
