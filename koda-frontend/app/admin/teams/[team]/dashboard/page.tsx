@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { teamsApi, type TeamDetail } from '@/lib/api/teams';
+import { teamsApi, type TeamDashboardData, type TeamDetail } from '@/lib/api/teams';
 import { 
   Activity, 
   AlertCircle, 
@@ -34,6 +34,7 @@ export default function AdminTeamDashboardPage() {
   const params = useParams();
   const teamId = params?.team as string;
   const [team, setTeam] = useState<TeamDetail | null>(null);
+  const [dashboard, setDashboard] = useState<TeamDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -43,17 +44,18 @@ export default function AdminTeamDashboardPage() {
 
   useEffect(() => {
     if (!isMounted || !teamId) return;
-    const loadTeam = async () => {
+    const loadDashboard = async () => {
       try {
-        const data = await teamsApi.findOne(teamId);
-        setTeam(data);
+        const data = await teamsApi.getDashboard(teamId);
+        setDashboard(data);
+        setTeam(data.team);
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard.');
       } finally {
         setIsLoading(false);
       }
     };
-    void loadTeam();
+    void loadDashboard();
   }, [isMounted, teamId]);
 
   if (!isMounted || isLoading) return <div className="p-8 text-text-muted font-mono animate-pulse">Initializing System...</div>;
@@ -63,17 +65,9 @@ export default function AdminTeamDashboardPage() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  const issues = [
-    { id: 1, title: "Add rate limiting to API endpoints", repo: "motawatt/koda-api", user: "Karl", status: "open" },
-    { id: 2, title: "Fix memory leak in data processing pipeline", repo: "motawatt/koda-engine", user: "S. Nakamura", status: "open" },
-    { id: 3, title: "Add unit tests for auth module", repo: "motawatt/koda-ui", user: "J. Doe", status: "open" },
-  ];
-
-  const logs = [
-    { type: 'DEPLOYMENT', message: 'Updated database schema', time: '12m ago' },
-    { type: 'SYSTEM', message: 'Team initialization complete', time: '1h ago' },
-    { type: 'ACCESS', message: 'Karl modified permissions', time: '3h ago' },
-  ];
+  const metrics = dashboard?.metrics;
+  const issues = dashboard?.recentIssues ?? [];
+  const logs = dashboard?.logs ?? [];
 
   return (
     <div className="flex h-full min-h-screen bg-transparent transition-all duration-500 ease-in-out">
@@ -107,10 +101,10 @@ export default function AdminTeamDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard label="Open Issues" value="3" subtext="Needs assignment" icon={<AlertCircle className="h-4 w-4 text-accent-primary" />} />
-          <MetricCard label="In Progress" value="0" subtext="Currently tracked" icon={<Clock className="h-4 w-4 text-yellow-500" />} />
-          <MetricCard label="Closed Issues" value="0" subtext="Closed this cycle" icon={<CheckCircle2 className="h-4 w-4 text-green-500" />} />
-          <MetricCard label="High Priority" value="0" subtext="Escalated items" icon={<Zap className="h-4 w-4 text-red-500" />} />
+          <MetricCard label="Open Issues" value={String(metrics?.openIssues ?? 0)} subtext="Needs assignment" icon={<AlertCircle className="h-4 w-4 text-accent-primary" />} />
+          <MetricCard label="In Progress" value={String(metrics?.inProgressIssues ?? 0)} subtext="Currently tracked" icon={<Clock className="h-4 w-4 text-yellow-500" />} />
+          <MetricCard label="Closed Issues" value={String(metrics?.closedIssues ?? 0)} subtext="Closed this cycle" icon={<CheckCircle2 className="h-4 w-4 text-green-500" />} />
+          <MetricCard label="High Priority" value={String(metrics?.highPriorityIssues ?? 0)} subtext="Escalated items" icon={<Zap className="h-4 w-4 text-red-500" />} />
         </div>
 
         <Card className="bg-bg-surface border-border-color shadow-2xl">
@@ -135,9 +129,12 @@ export default function AdminTeamDashboardPage() {
                       <span>{issue.repo}</span><span>•</span><span className="text-text-muted/80">{issue.user}</span>
                     </div>
                   </div>
-                  <Badge className="bg-accent-primary/10 text-accent-primary border-accent-primary/20 text-[10px] font-mono uppercase">{issue.status}</Badge>
+                  <Badge className="bg-accent-primary/10 text-accent-primary border-accent-primary/20 text-[10px] font-mono uppercase">{issue.status.replace('_', ' ')}</Badge>
                 </div>
               ))}
+              {issues.length === 0 && (
+                <div className="p-4 text-xs font-mono uppercase tracking-wider text-text-muted">No issue updates found.</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -154,14 +151,17 @@ export default function AdminTeamDashboardPage() {
         </div>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          {logs.map((log, i) => (
-            <div key={i} className="relative pl-6 border-l border-border-color/50 space-y-1">
+          {logs.map((log) => (
+            <div key={`${log.type}-${log.timestamp}-${log.message}`} className="relative pl-6 border-l border-border-color/50 space-y-1">
               <div className="absolute -left-[5px] top-0 h-2 w-2 rounded-full bg-accent-primary/50 shadow-[0_0_8px_rgba(var(--accent-primary-rgb),0.5)]" />
               <p className="text-[10px] font-mono font-bold text-text-primary tracking-widest">{log.type}</p>
               <p className="text-xs text-text-muted leading-relaxed">{log.message}</p>
               <p className="text-[9px] font-mono text-text-muted/50 uppercase">{log.time}</p>
             </div>
           ))}
+          {logs.length === 0 && (
+            <div className="text-xs font-mono uppercase tracking-wider text-text-muted">No activity logs found.</div>
+          )}
         </div>
 
         <div className="p-6 border-t border-border-color bg-bg-elevated/20">

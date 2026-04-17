@@ -16,7 +16,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Role } from '../common/enums/role.enum';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
-import { TeamsService } from './teams.service';
+import { TeamsService, type TeamDashboardData } from './teams.service';
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -61,6 +61,15 @@ export class TeamsController {
     @CurrentUser() user: UserRecord,
   ) {
     return this.teamsService.removeMember(id, userId, user.id, user.role);
+  }
+
+  @Get(':id/dashboard')
+  @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  getDashboard(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserRecord,
+  ): Promise<TeamDashboardData> {
+    return this.teamsService.getDashboard(id, user.id, user.role);
   }
 
   @Get(':id')

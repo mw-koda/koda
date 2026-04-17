@@ -36,6 +36,38 @@ export interface AddTeamMemberPayload {
   userId: string;
   role: 'admin' | 'coordinator' | 'intern' | 'team_lead';
 }
+
+export type TeamIssueStatus = 'open' | 'closed' | 'in_progress';
+
+export interface TeamDashboardMetrics {
+  openIssues: number;
+  inProgressIssues: number;
+  closedIssues: number;
+  highPriorityIssues: number;
+}
+
+export interface TeamDashboardRecentIssueItem {
+  id: string;
+  title: string;
+  repo: string;
+  user: string;
+  status: TeamIssueStatus;
+}
+
+export interface TeamDashboardLogItem {
+  type: string;
+  message: string;
+  time: string;
+  timestamp: string;
+}
+
+export interface TeamDashboardData {
+  team: TeamDetail;
+  metrics: TeamDashboardMetrics;
+  recentIssues: TeamDashboardRecentIssueItem[];
+  logs: TeamDashboardLogItem[];
+}
+
 export const teamsApi = {
   async create(payload: CreateTeamPayload): Promise<TeamDetail> {
     return requestJson<TeamDetail>('/teams', {
@@ -47,6 +79,10 @@ export const teamsApi = {
 
   async findOne(id: string): Promise<TeamDetail> {
     return requestJson<TeamDetail>(`/teams/${id}`);
+  },
+
+  async getDashboard(id: string): Promise<TeamDashboardData> {
+    return requestJson<TeamDashboardData>(`/teams/${id}/dashboard`);
   },
 
   async findMine(): Promise<TeamDetail[]> {
