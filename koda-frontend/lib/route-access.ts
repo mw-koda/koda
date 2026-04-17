@@ -4,6 +4,6 @@ export type FlowKey = 'admin' | 'coordinator' | 'intern';
 
 export const flowAccess: Record<FlowKey, AppRole[]> = {
   admin: ['admin', 'team_lead'],
-  coordinator: ['coordinator'],
+  coordinator: ['coordinator', 'admin', 'team_lead'],
   intern: ['intern'],
 };
