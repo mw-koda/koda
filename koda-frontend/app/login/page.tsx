@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Github } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-// import { mockAuthConfig, roleRedirects } from '@/lib/mock-data';
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { getPublicApiBaseUrl } from '@/lib/public-config';
+
+const API_URL = getPublicApiBaseUrl();
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
