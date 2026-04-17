@@ -75,7 +75,7 @@ export function Sidebar() {
         ? [
             { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
             { name: 'Profile', href: '/interns/profile', icon: UserCircle },
-            { name: 'Issue Tracking', href: '/coordinator/issue-tracking-page', icon: GitPullRequest },
+            { name: 'Issue Tracking', href: '/interns/issue-tracking', icon: GitPullRequest },
           ]
         : [
             { name: 'Dashboard', href: dashboardHref, icon: LayoutDashboard },
