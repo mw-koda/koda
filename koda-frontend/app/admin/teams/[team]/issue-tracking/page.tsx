@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { deslugifyTeamName } from '@/lib/team-utils';
+import { teamsApi } from '@/lib/api/teams';
 import { useAllIssues } from '@/hooks/use-all-issues';
 
 type IssueStatusFilter = 'all' | 'open' | 'in_progress' | 'closed';
@@ -31,14 +32,47 @@ function formatShortDate(dateStr: string | null) {
   });
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function resolveTeamName(teamSlug: string) {
+  if (!teamSlug || isUuid(teamSlug)) {
+    return 'Team';
+  }
+
   return deslugifyTeamName(teamSlug) || 'Team';
 }
 
 export default function AdminTeamIssueTrackingPage() {
   const params = useParams();
   const teamSlug = params?.team as string;
-  const teamName = resolveTeamName(teamSlug || '');
+  const [teamName, setTeamName] = useState(resolveTeamName(teamSlug || ''));
+
+  useEffect(() => {
+    if (!teamSlug) {
+      setTeamName('Team');
+      return;
+    }
+
+    const fallbackName = resolveTeamName(teamSlug);
+    setTeamName(fallbackName);
+
+    if (!isUuid(teamSlug)) {
+      return;
+    }
+
+    const loadTeamName = async () => {
+      try {
+        const team = await teamsApi.findOne(teamSlug);
+        setTeamName(team.name || 'Team');
+      } catch {
+        setTeamName('Team');
+      }
+    };
+
+    void loadTeamName();
+  }, [teamSlug]);
 
   const { issues, isLoading, error } = useAllIssues();
 
