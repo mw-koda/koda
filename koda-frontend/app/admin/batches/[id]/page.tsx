@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CalendarRange, ChevronLeft, Layers, Users, Plus } from 'lucide-react'; // Added Plus icon
+import { AlertCircle, ArrowRight, CalendarRange, ChevronLeft, Clock3, Layers, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -121,6 +121,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
   const daysRemaining = getDaysRemaining(batch.endDate);
   const totalInterns = batch.assignedInterns.length;
+  const attendanceHref = `/admin/live-attendance?batchId=${batch.id}`;
 
   return (
     <div className="p-8 space-y-8">
@@ -167,22 +168,38 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           </CardHeader>
         </Card>
 
-        <Card className="card-glow border-border-color bg-bg-surface h-full transition-colors hover:border-accent-primary/40 hover:bg-bg-elevated/50">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-sm font-medium uppercase tracking-[0.24em] text-text-muted">
-                Assigned Interns
-              </CardTitle>  
-              <Users className="h-5 w-5 text-accent-primary" />
-            </div>
-            <div className="space-y-2">
-              <span className="font-display text-4xl font-bold text-text-primary">
-                {totalInterns}
-              </span>
-              <p className="text-sm text-text-muted">interns assigned to this batch</p>
-            </div>
-          </CardHeader>
-        </Card>
+        <Link href={attendanceHref} className="block h-full group">
+          <Card className="card-glow border-border-color bg-bg-surface h-full transition-colors group-hover:border-accent-primary/40 group-hover:bg-bg-elevated/50">
+            <CardHeader className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-sm font-medium uppercase tracking-[0.24em] text-text-muted">
+                  Live Attendance
+                </CardTitle>
+                <Clock3 className="h-5 w-5 text-accent-primary" />
+              </div>
+              <div className="space-y-2">
+                <span className="font-display text-4xl font-bold text-text-primary">
+                  {totalInterns}
+                </span>
+                <p className="text-sm text-text-muted">interns ready for tracking</p>
+              </div>
+              <div className="flex items-center justify-between border-t border-border-color/60 pt-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-text-muted">
+                    Attendance date
+                  </p>
+                  <p className="mt-1 text-sm text-text-primary">
+                    {formatDate(new Date().toISOString())}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent-primary transition-transform group-hover:translate-x-0.5">
+                  Open tracker
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </div>
+            </CardHeader>
+          </Card>
+        </Link>
 
         <Card className="card-glow border-border-color bg-bg-surface">
           <CardHeader className="space-y-3">
