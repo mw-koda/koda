@@ -13,6 +13,7 @@ export default function InternProfilePage() {
   }, []);
 
   const currentUser = roleToUserMap[selectedRole] || roleToUserMap.intern;
+  const canManageReports = selectedRole === 'intern';
   const internId = useMemo(() => {
     const match = interns.find(
       (intern) => intern.github === currentUser.github || intern.name === currentUser.name
@@ -20,5 +21,11 @@ export default function InternProfilePage() {
     return match?.id || interns[0]?.id;
   }, [currentUser]);
 
-  return <InternProfileView internId={internId} backLabel="Dashboard" />;
+  return (
+    <InternProfileView
+      internId={internId}
+      backLabel="Dashboard"
+      canManageReports={canManageReports}
+    />
+  );
 }
