@@ -3,8 +3,15 @@
 import JoinBatchGatekeeperModal from '@/components/join-batch-gatekeeper-modal';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { attendanceLogs, getAttendanceByInternId, interns, issues } from '@/lib/mock-data';
+import {
+  attendanceLogs,
+  getAttendanceByInternId,
+  getReportsByInternId,
+  interns,
+  issues,
+} from '@/lib/mock-data';
 import {
     Clock,
     FileText,
@@ -101,9 +108,19 @@ export default function CoordinatorDashboardPage() {
     setHasBatchAssignment(Boolean(assignedBatchId));
   }, [isLoading, isMounted, user]);
 
-  const school = useMemo(() => {
-    return user?.school ?? user?.school_name ?? persistedSchool ?? 'School not assigned';
+  const coordinatorSchool = useMemo(() => {
+    return user?.school ?? user?.school_name ?? persistedSchool ?? null;
   }, [persistedSchool, user]);
+
+  const school = coordinatorSchool ?? 'School not assigned';
+
+  const schoolScopedInterns = useMemo(() => {
+    if (!coordinatorSchool) {
+      return interns;
+    }
+
+    return interns.filter((intern) => intern.school === coordinatorSchool);
+  }, [coordinatorSchool]);
 
   const handleJoinBatch = async ({ batchCode, school: schoolName }: { batchCode: string; school: string }) => {
     localStorage.setItem('userBatchId', batchCode.trim());
@@ -148,7 +165,7 @@ export default function CoordinatorDashboardPage() {
  
     return { intern, totalMinutes, daysPresent, attendanceRate, latestLog };
   });
- 
+
   return (
     <div className="p-8">
       <JoinBatchGatekeeperModal
@@ -353,34 +370,50 @@ export default function CoordinatorDashboardPage() {
           Intern Status Summary
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {interns.map((intern) => (
-            <Link
-              key={intern.id}
-              href={`/coordinator/intern/${intern.id}`}
-              className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/40 transition-colors block"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-accent-primary/20 border border-accent-primary/40 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-mono font-bold text-accent-primary">
-                    {intern.avatarInitials}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-text-primary">{intern.name}</p>
-                  <p className="text-xs text-text-muted mb-2">{intern.role}</p>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge
-                      variant="outline"
-                      className={`text-xs ${getReportStatusClass(intern.reportStatus)}`}
-                    >
-                      {intern.reportStatus}
-                    </Badge>
-                    <span className="text-xs text-text-muted">{intern.score}%</span>
+          {schoolScopedInterns.map((intern) => (
+            (() => {
+              const latestReport = [...getReportsByInternId(intern.id)].sort(
+                (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+              )[0];
+
+              return (
+                <Link key={intern.id} href={`/coordinator/intern/${intern.id}`}>
+                  <div className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/50 transition-all card-glow cursor-pointer">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
+                        <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
+                          {intern.avatarInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-text-primary truncate">
+                          {intern.name}
+                        </h3>
+                        <p className="text-xs text-text-muted mb-2">{intern.role}</p>
+                        <div className="mb-2 flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              latestReport?.status === 'reviewed'
+                                ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
+                                : latestReport?.status === 'pending'
+                                  ? 'bg-text-muted/10 text-text-muted border-text-muted/30'
+                                  : 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
+                            }`}
+                          >
+                            {latestReport?.status ?? 'submitted'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-text-muted truncate">
+                          Recent report: {latestReport?.period ?? 'No submitted report yet'}
+                        </p>
+                        <p className="text-xs text-text-muted">{intern.lastActive}</p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-text-muted">{intern.lastActive}</p>
-                </div>
-              </div>
-            </Link>
+                </Link>
+              );
+            })()
           ))}
         </div>
       </Card>
