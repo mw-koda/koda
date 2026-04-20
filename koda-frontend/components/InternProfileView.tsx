@@ -58,11 +58,13 @@ function getReportStatusClass(status: string) {
 type InternProfileViewProps = {
   backLabel?: string;
   internId?: string;
+  canManageReports?: boolean;
 };
 
 export default function InternProfileView({
   backLabel = 'Intern Management',
   internId,
+  canManageReports = false,
 }: InternProfileViewProps) {
   const params = useParams();
   const router = useRouter();
@@ -212,20 +214,22 @@ export default function InternProfileView({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <button
-            onClick={() => setIsAddReportModalOpen(true)}
-            className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            + Add Report
-          </button>
-          <button
-            onClick={() => setIsAttendanceModalOpen(true)}
-            className="px-4 py-2 text-sm font-semibold text-accent-secondary border border-accent-secondary rounded-md hover:bg-accent-secondary/10 transition-colors"
-          >
-            Attendance
-          </button>
-        </div>
+        {canManageReports && (
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={() => setIsAddReportModalOpen(true)}
+              className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              + Add Report
+            </button>
+            <button
+              onClick={() => setIsAttendanceModalOpen(true)}
+              className="px-4 py-2 text-sm font-semibold text-accent-secondary border border-accent-secondary rounded-md hover:bg-accent-secondary/10 transition-colors"
+            >
+              Attendance
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
