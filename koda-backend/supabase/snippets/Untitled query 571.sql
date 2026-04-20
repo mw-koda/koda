@@ -1,0 +1,1 @@
+ALTER TABLE issues ADD CONSTRAINT issues_github_issue_id_key UNIQUE (github_issue_id);
