@@ -2,8 +2,9 @@
 
 import { auth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
+import { getPublicApiBaseUrl } from '@/lib/public-config';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_URL = getPublicApiBaseUrl();
 
 export type CurrentUser = {
   id: string;
