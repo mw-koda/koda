@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { roleRedirects } from '@/lib/role-redirects';
+import { roleRedirects, type AppRole } from '@/lib/role-redirects';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { auth } from '@/lib/auth';
 
@@ -24,6 +24,26 @@ const adminNavigation = [
   { name: 'Batch Management', href: '/admin/batches', icon: Layers, match: 'prefix' },
 ];
 
+<<<<<<< Updated upstream
+=======
+function isAdminNavItemActive(pathname: string, href: string) {
+  if (href === '/admin') {
+    return pathname === href;
+  }
+
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+function toAppRole(value: string | null | undefined): AppRole {
+  if (value === 'admin' || value === 'coordinator' || value === 'intern' || value === 'team_lead') {
+    return value;
+  }
+
+  return 'coordinator';
+}
+
+
+>>>>>>> Stashed changes
 export function Sidebar() {
   const pathname = usePathname();
   const { user, isLoading } = useCurrentUser();
@@ -35,8 +55,8 @@ export function Sidebar() {
     setStoredRole(localStorage.getItem('selectedRole'));
   }, []);
 
-  const rawRole = user?.role ?? storedRole ?? 'coordinator';
-  const normalizedRole = rawRole === 'team_lead' ? 'admin' : rawRole;
+  const rawRole = toAppRole(user?.role ?? storedRole ?? 'coordinator');
+  const normalizedRole: AppRole = rawRole === 'team_lead' ? 'admin' : rawRole;
   const currentRole = normalizedRole;
 
   if (isLoading) {

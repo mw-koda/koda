@@ -13,6 +13,7 @@ export interface TeamMember {
 export interface TeamDetail {
   id: string;
   name: string;
+  batchId: string | null;
   createdBy: {
     id: string;
     githubUsername: string | null;
@@ -27,6 +28,7 @@ export interface TeamDetail {
 
 export interface CreateTeamPayload {
   name: string;
+  batchId: string;
   description?: string;
   teamLeadId?: string;
   maxInterns?: number;
@@ -85,8 +87,14 @@ export const teamsApi = {
     return requestJson<TeamDashboardData>(`/teams/${id}/dashboard`);
   },
 
-  async findMine(): Promise<TeamDetail[]> {
-    return requestJson<TeamDetail[]>('/teams');
+  async findMine(batchId?: string): Promise<TeamDetail[]> {
+    const params = new URLSearchParams();
+    if (batchId) {
+      params.append('batchId', batchId);
+    }
+
+    const query = params.toString();
+    return requestJson<TeamDetail[]>(query ? `/teams?${query}` : '/teams');
   },
 
   async addMember(teamId: string, payload: AddTeamMemberPayload): Promise<TeamDetail> {

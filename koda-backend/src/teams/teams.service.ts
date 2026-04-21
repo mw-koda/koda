@@ -21,6 +21,7 @@ type UserRow = {
 type TeamRow = {
   id: string;
   name: string;
+  batch_id: string | null;
   created_by: string;
   created_at: string | null;
   creator?: UserRow | null;
@@ -37,6 +38,7 @@ type TeamMemberRow = {
 type TeamDetail = {
   id: string;
   name: string;
+  batchId: string | null;
   createdBy: {
     id: string;
     githubUsername: string | null;
@@ -105,6 +107,10 @@ export type TeamDashboardData = {
 };
 
 type TeamInternRow = {
+  id: string;
+};
+
+type InternByUserRow = {
   id: string;
 };
 
@@ -191,12 +197,14 @@ export class TeamsService {
     }
 
     await this.getUserOrThrow(creatorId);
+    await this.getBatchOrThrow(createTeamDto.batchId);
 
     const supabase = this.supabaseService.getClient();
     const result = (await supabase
       .from('teams')
       .insert({
         name: teamName,
+        batch_id: createTeamDto.batchId,
         created_by: creatorId,
       })
       .select('id')
@@ -241,8 +249,12 @@ export class TeamsService {
     actorId: string,
     actorRole: Role,
   ): Promise<TeamDetail> {
-    await this.assertCanManageTeam(teamId, actorId, actorRole);
+    const team = await this.assertCanManageTeam(teamId, actorId, actorRole);
     await this.getUserOrThrow(dto.userId);
+
+    if (dto.role === Role.INTERN) {
+      await this.assertInternBelongsToTeamBatch(dto.userId, team);
+    }
 
     const supabase = this.supabaseService.getClient();
     const existingMemberResult = (await supabase
@@ -378,9 +390,16 @@ export class TeamsService {
     }));
 
     return {
+<<<<<<< Updated upstream
       id: teamId,
       name,
       createdBy: creator
+=======
+      id: team.id,
+      name: team.name,
+      batchId: team.batch_id,
+      createdBy: team.creator
+>>>>>>> Stashed changes
         ? {
             id: creator.id,
             githubUsername: creator.github_username,
@@ -395,17 +414,31 @@ export class TeamsService {
     };
   }
 
-  async findMine(actorId: string, actorRole: Role): Promise<TeamDetail[]> {
+  async findMine(
+    actorId: string,
+    actorRole: Role,
+    batchId?: string,
+  ): Promise<TeamDetail[]> {
     if (!this.canManageTeams(actorRole)) {
       throw new ForbiddenException('You are not allowed to manage teams.');
     }
 
+    if (batchId && !this.isUuid(batchId)) {
+      throw new BadRequestException('Invalid batchId query parameter.');
+    }
+
     const supabase = this.supabaseService.getClient();
-    const teamsResult = (await supabase
+    let teamsQuery = supabase
       .from('teams')
       .select('id')
       .eq('created_by', actorId)
-      .order('created_at', { ascending: false })) as unknown as {
+      .order('created_at', { ascending: false });
+
+    if (batchId) {
+      teamsQuery = teamsQuery.eq('batch_id', batchId);
+    }
+
+    const teamsResult = (await teamsQuery) as unknown as {
       data: Array<{ id: string }> | null;
       error: { message: string } | null;
     };
@@ -672,7 +705,7 @@ export class TeamsService {
     const result = (await supabase
       .from('teams')
       .select(
-        'id, name, created_by, created_at, creator:created_by(id, github_username, name, email, role)',
+        'id, name, batch_id, created_by, created_at, creator:created_by(id, github_username, name, email, role)',
       )
       .eq('id', id)
       .single()) as unknown as {
@@ -709,11 +742,88 @@ export class TeamsService {
     return role === Role.ADMIN || role === Role.TEAM_LEAD;
   }
 
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
+  private async getBatchOrThrow(id: string): Promise<void> {
+    const supabase = this.supabaseService.getClient();
+    const result = (await supabase
+      .from('batches')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle()) as unknown as {
+      data: { id: string } | null;
+      error: { message: string } | null;
+    };
+
+    if (result.error) {
+      throw new BadRequestException(result.error.message);
+    }
+
+    if (!result.data) {
+      throw new NotFoundException('Batch not found.');
+    }
+  }
+
+  private async assertInternBelongsToTeamBatch(
+    userId: string,
+    team: TeamRow,
+  ): Promise<void> {
+    if (!team.batch_id) {
+      throw new BadRequestException(
+        'Team is not linked to a batch. Please set team batch first.',
+      );
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const internResult = (await supabase
+      .from('interns')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()) as unknown as {
+      data: InternByUserRow | null;
+      error: { message: string } | null;
+    };
+
+    if (internResult.error) {
+      throw new BadRequestException(internResult.error.message);
+    }
+
+    if (!internResult.data) {
+      throw new BadRequestException(
+        'Selected user does not have an intern record.',
+      );
+    }
+
+    const enrollmentResult = (await supabase
+      .from('batch_interns')
+      .select('id')
+      .eq('intern_id', internResult.data.id)
+      .eq('batch_id', team.batch_id)
+      .maybeSingle()) as unknown as {
+      data: { id: string } | null;
+      error: { message: string } | null;
+    };
+
+    if (enrollmentResult.error) {
+      throw new BadRequestException(enrollmentResult.error.message);
+    }
+
+    if (!enrollmentResult.data) {
+      throw new BadRequestException(
+        'Intern must be enrolled in the same batch as this team.',
+      );
+    }
+  }
+
   private async assertCanManageTeam(
     teamId: string,
     actorId: string,
     actorRole: Role,
-  ): Promise<void> {
+  ): Promise<TeamRow> {
     if (!this.canManageTeams(actorRole)) {
       throw new ForbiddenException(
         'Only admins and team leads can manage teams.',
@@ -724,5 +834,7 @@ export class TeamsService {
     if (team.created_by !== actorId) {
       throw new ForbiddenException('You can only manage teams you created.');
     }
+
+    return team;
   }
 }

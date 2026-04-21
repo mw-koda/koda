@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { AlertCircle, ArrowRight, CalendarRange, ChevronLeft, Clock3, Layers, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { batchesApi, type BatchDetail } from '@/lib/api/batches';
 import { teamsApi, type TeamDetail } from '@/lib/api/teams';
 import CreateTeamModal from '../create-team-modal/modal';
@@ -93,7 +92,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
       setTeamsLoading(true);
       setTeamsError(null);
       try {
-        const data = await teamsApi.findMine();
+        const data = await teamsApi.findMine(params.id);
         setTeams(data);
       } catch (requestError) {
         setTeams([]);
@@ -278,7 +277,12 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
                         {teamInternCount} interns | Overall Project Progress
                       </p>
                       <div className="mt-4">
-                        <Progress value={progress} className="h-2" />
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-bg-surface">
+                          <div
+                            className="h-full bg-accent-primary transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
                         <p className="mt-2 text-xs text-text-muted">
                           {progress}% complete
                         </p>
@@ -294,6 +298,7 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
 
       {/* 4. Render the Modal */}
       <CreateTeamModal 
+        batchId={batch.id}
         isOpen={isTeamModalOpen}
         onClose={() => setIsTeamModalOpen(false)}
         onSuccess={handleTeamCreated}

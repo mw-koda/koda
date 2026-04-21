@@ -12,6 +12,9 @@ export class CreateTeamDto {
   @MaxLength(120)
   name!: string;
 
+  @IsUUID()
+  batchId!: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(500)

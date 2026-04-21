@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import type { UserRecord } from '../auth/auth.service';
@@ -25,8 +26,11 @@ export class TeamsController {
 
   @Get()
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
-  findMine(@CurrentUser() user: UserRecord) {
-    return this.teamsService.findMine(user.id, user.role);
+  findMine(
+    @CurrentUser() user: UserRecord,
+    @Query('batchId') batchId?: string,
+  ) {
+    return this.teamsService.findMine(user.id, user.role, batchId);
   }
 
   @Post()

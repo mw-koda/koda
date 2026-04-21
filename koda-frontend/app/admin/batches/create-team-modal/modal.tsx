@@ -25,12 +25,13 @@ import { teamsApi, type TeamDetail } from '@/lib/api/teams';
 import { toTitleCase } from '@/lib/utils';
 
 interface CreateTeamModalProps {
+  batchId: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (team: TeamDetail) => void;
 }
 
-export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalProps) {
+export default function CreateTeamModal({ batchId, isOpen, onClose, onSuccess }: CreateTeamModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [adminUsers, setAdminUsers] = useState<ApiUser[]>([]);
   const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
@@ -90,7 +91,12 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
     
     // Constructing the metadata payload
     const payload = {
+<<<<<<< Updated upstream
       name: teamName,
+=======
+      name: formData.get('name') as string,
+      batchId,
+>>>>>>> Stashed changes
       description: formData.get('description') as string,
       teamLeadId: teamLeadId || undefined,
       maxInterns: parseInt(formData.get('maxInterns') as string, 10),
