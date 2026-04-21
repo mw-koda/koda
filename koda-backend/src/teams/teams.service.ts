@@ -88,8 +88,6 @@ type TeamDashboardRecentIssueItem = {
   repo: string;
   user: string;
   status: TeamIssueState;
-  createdAt: string | null;
-  updatedAt: string | null;
 };
 
 type TeamDashboardLogItem = {
@@ -180,15 +178,10 @@ export class TeamsService {
     creatorId: string,
     creatorRole: Role,
   ): Promise<TeamDetail> {
-    let teamName = createTeamDto.name?.trim();
+    const teamName = createTeamDto.name?.trim();
     if (!teamName) {
       throw new BadRequestException('Team name is required.');
     }
-
-    teamName = teamName
-      .split(' ')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
 
     if (!this.canManageTeams(creatorRole)) {
       throw new BadRequestException(
@@ -297,29 +290,6 @@ export class TeamsService {
     return this.findOne(teamId, actorId, actorRole);
   }
 
-  async updateMemberRole(
-    teamId: string,
-    userId: string,
-    role: Role,
-    actorId: string,
-    actorRole: Role,
-  ): Promise<TeamDetail> {
-    await this.assertCanManageTeam(teamId, actorId, actorRole);
-
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from('team_members')
-      .update({ role })
-      .eq('team_id', teamId)
-      .eq('user_id', userId);
-
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
-
-    return this.findOne(teamId, actorId, actorRole);
-  }
-
   async removeMember(
     teamId: string,
     userId: string,
@@ -357,12 +327,7 @@ export class TeamsService {
     actorRole: Role,
   ): Promise<TeamDetail> {
     await this.assertCanManageTeam(id, actorId, actorRole);
-    const {
-      id: teamId,
-      name,
-      creator,
-      created_at: createdAt,
-    } = await this.getTeamOrThrow(id);
+    const team = await this.getTeamOrThrow(id);
 
     const supabase = this.supabaseService.getClient();
     const membersResult = (await supabase
@@ -390,25 +355,19 @@ export class TeamsService {
     }));
 
     return {
-<<<<<<< Updated upstream
-      id: teamId,
-      name,
-      createdBy: creator
-=======
       id: team.id,
       name: team.name,
       batchId: team.batch_id,
       createdBy: team.creator
->>>>>>> Stashed changes
         ? {
-            id: creator.id,
-            githubUsername: creator.github_username,
-            name: creator.name,
-            email: creator.email,
-            role: creator.role,
+            id: team.creator.id,
+            githubUsername: team.creator.github_username,
+            name: team.creator.name,
+            email: team.creator.email,
+            role: team.creator.role,
           }
         : null,
-      createdAt,
+      createdAt: team.created_at,
       members,
       memberCount: members.length,
     };
@@ -569,8 +528,6 @@ export class TeamsService {
       repo: issue.repo,
       user: issue.user,
       status: issue.status,
-      createdAt: issue.createdAt,
-      updatedAt: issue.updatedAt,
     }));
   }
 

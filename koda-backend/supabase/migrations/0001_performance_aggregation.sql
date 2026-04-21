@@ -44,7 +44,7 @@ as $$
       pm.score,
       date_trunc(
         case when lower(p_bucket) = 'month' then 'month' else 'week' end,
-        coalesce(pm.evaluated_at, pm.created_at)
+        coalesce(pm.evaluated_at, now())
       ) as bucket_start
     from public.performance_metrics pm
     join public.interns i on i.id = pm.intern_id
