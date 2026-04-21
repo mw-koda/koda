@@ -31,7 +31,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  @Roles(Role.ADMIN, Role.TEAM_LEAD, Role.COORDINATOR)
   async getUsers(@Query() query: GetUsersQueryDto): Promise<UserRecord[]> {
     return this.usersService.getUsers(query);
   }

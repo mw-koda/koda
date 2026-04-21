@@ -8,7 +8,7 @@ import {
   Patch,
   Delete,
 } from '@nestjs/common';
-import { InternsService } from './interns.service';
+import { InternsService, type InternFilters } from './interns.service';
 import { CreateInternDto } from './dto/create-intern.dto';
 import { UpdateInternDto } from './dto/update-intern.dto';
 
@@ -22,7 +22,7 @@ export class InternsController {
   }
 
   @Get()
-  findAll(@Query() query: any) {
+  findAll(@Query() query: InternFilters) {
     return this.service.findAll(query);
   }
 

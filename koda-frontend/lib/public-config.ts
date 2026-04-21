@@ -7,6 +7,13 @@ export function getPublicApiBaseUrl(): string {
   }
 
   if (typeof window !== 'undefined') {
+    if (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    ) {
+      return FALLBACK_DEV_API_URL;
+    }
+
     return window.location.origin;
   }
 

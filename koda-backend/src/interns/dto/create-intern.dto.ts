@@ -2,10 +2,10 @@ import { IsUUID, IsOptional, IsString } from 'class-validator';
 
 export class CreateInternDto {
   @IsUUID()
-  user_id: string;
+  user_id!: string;
 
   @IsUUID()
-  team_id: string;
+  team_id!: string;
 
   @IsOptional()
   @IsString()
