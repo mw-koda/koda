@@ -24,8 +24,6 @@ const adminNavigation = [
   { name: 'Batch Management', href: '/admin/batches', icon: Layers, match: 'prefix' },
 ];
 
-<<<<<<< Updated upstream
-=======
 function isAdminNavItemActive(pathname: string, href: string) {
   if (href === '/admin') {
     return pathname === href;
@@ -43,7 +41,6 @@ function toAppRole(value: string | null | undefined): AppRole {
 }
 
 
->>>>>>> Stashed changes
 export function Sidebar() {
   const pathname = usePathname();
   const { user, isLoading } = useCurrentUser();

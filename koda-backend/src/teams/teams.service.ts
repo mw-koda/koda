@@ -243,10 +243,10 @@ export class TeamsService {
     actorRole: Role,
   ): Promise<TeamDetail> {
     const team = await this.assertCanManageTeam(teamId, actorId, actorRole);
-    await this.getUserOrThrow(dto.userId);
+    const user = await this.getUserOrThrow(dto.userId);
 
     if (dto.role === Role.INTERN) {
-      await this.assertInternBelongsToTeamBatch(dto.userId, team);
+      await this.assertInternBelongsToTeamBatch(user, team);
     }
 
     const supabase = this.supabaseService.getClient();
@@ -390,8 +390,11 @@ export class TeamsService {
     let teamsQuery = supabase
       .from('teams')
       .select('id')
-      .eq('created_by', actorId)
       .order('created_at', { ascending: false });
+
+    if (actorRole !== Role.ADMIN) {
+      teamsQuery = teamsQuery.eq('created_by', actorId);
+    }
 
     if (batchId) {
       teamsQuery = teamsQuery.eq('batch_id', batchId);
@@ -726,7 +729,7 @@ export class TeamsService {
   }
 
   private async assertInternBelongsToTeamBatch(
-    userId: string,
+    user: UserRow,
     team: TeamRow,
   ): Promise<void> {
     if (!team.batch_id) {
@@ -735,30 +738,13 @@ export class TeamsService {
       );
     }
 
+    const internId = await this.getOrCreateInternIdForUser(user);
+
     const supabase = this.supabaseService.getClient();
-    const internResult = (await supabase
-      .from('interns')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle()) as unknown as {
-      data: InternByUserRow | null;
-      error: { message: string } | null;
-    };
-
-    if (internResult.error) {
-      throw new BadRequestException(internResult.error.message);
-    }
-
-    if (!internResult.data) {
-      throw new BadRequestException(
-        'Selected user does not have an intern record.',
-      );
-    }
-
     const enrollmentResult = (await supabase
       .from('batch_interns')
       .select('id')
-      .eq('intern_id', internResult.data.id)
+      .eq('intern_id', internId)
       .eq('batch_id', team.batch_id)
       .maybeSingle()) as unknown as {
       data: { id: string } | null;
@@ -776,6 +762,66 @@ export class TeamsService {
     }
   }
 
+  private async getOrCreateInternIdForUser(user: UserRow): Promise<string> {
+    if (user.role !== Role.INTERN) {
+      throw new BadRequestException(
+        'Selected user must be onboarded as intern role to be added as an intern member.',
+      );
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const internResult = (await supabase
+      .from('interns')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()) as unknown as {
+      data: InternByUserRow | null;
+      error: { message: string } | null;
+    };
+
+    if (internResult.error) {
+      throw new BadRequestException(internResult.error.message);
+    }
+
+    if (internResult.data) {
+      return internResult.data.id;
+    }
+
+    const insertResult = (await supabase
+      .from('interns')
+      .insert({ user_id: user.id })
+      .select('id')
+      .maybeSingle()) as unknown as {
+      data: InternByUserRow | null;
+      error: { message: string } | null;
+    };
+
+    if (insertResult.error) {
+      const retryResult = (await supabase
+        .from('interns')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()) as unknown as {
+        data: InternByUserRow | null;
+        error: { message: string } | null;
+      };
+
+      if (retryResult.error || !retryResult.data) {
+        throw new BadRequestException(
+          retryResult.error?.message ?? insertResult.error.message,
+        );
+      }
+
+      return retryResult.data.id;
+    }
+
+    if (!insertResult.data) {
+      throw new BadRequestException('Failed to create intern record.');
+    }
+
+    return insertResult.data.id;
+  }
+
   private async assertCanManageTeam(
     teamId: string,
     actorId: string,
@@ -788,7 +834,7 @@ export class TeamsService {
     }
 
     const team = await this.getTeamOrThrow(teamId);
-    if (team.created_by !== actorId) {
+    if (actorRole !== Role.ADMIN && team.created_by !== actorId) {
       throw new ForbiddenException('You can only manage teams you created.');
     }
 
