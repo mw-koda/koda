@@ -1,6 +1,60 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type { CreateInternDto } from './dto/create-intern.dto';
+import type { UpdateInternDto } from './dto/update-intern.dto';
 import { SupabaseService } from '../supabase/supabase.service';
-import { IssuesService } from '../issues/issues.service';
+import { IssuesService, type Issue } from '../issues/issues.service';
+
+type InternRow = {
+  id: string;
+  user_id: string;
+  team_id: string | null;
+  created_at: string | null;
+};
+
+type InternUserRow = {
+  id: string;
+  github_username: string;
+  name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+};
+
+type InternReportSummaryRow = {
+  id: string;
+  title: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  submitted_at: string | null;
+  status: string | null;
+};
+
+type InternIssueAssignmentSummaryRow = {
+  id: string;
+};
+
+export type InternListRow = InternRow & {
+  user: InternUserRow | null;
+  reports: InternReportSummaryRow[];
+  issue_assignments: InternIssueAssignmentSummaryRow[];
+};
+
+type BatchInternRow = {
+  intern_id: string;
+};
+
+type ReportRow = {
+  period_start: string | null;
+  period_end: string | null;
+};
+
+export type InternFilters = {
+  teamId?: string;
+  batchId?: string;
+};
 
 @Injectable()
 export class InternsService {
@@ -13,61 +67,128 @@ export class InternsService {
     return this.supabase.getClient();
   }
 
-  // ---------------- CREATE INTERN ----------------
-  async create(dto: any) {
-    const { data, error } = await this.db.from('interns').insert(dto).select();
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
+  private async resolveBatchId(
+    batchIdentifier: string,
+  ): Promise<string | null> {
+    if (this.isUuid(batchIdentifier)) {
+      return batchIdentifier;
+    }
+
+    const { data, error } = (await this.db
+      .from('batches')
+      .select('id')
+      .eq('join_code', batchIdentifier.toUpperCase())
+      .maybeSingle()) as {
+      data: { id: string } | null;
+      error: Error | null;
+    };
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    return data?.id ?? null;
+  }
+
+  async create(dto: CreateInternDto): Promise<InternRow | null> {
+    const { data, error } = (await this.db
+      .from('interns')
+      .insert(dto)
+      .select()) as {
+      data: InternRow[] | null;
+      error: Error | null;
+    };
 
     if (error) {
       console.error('🔥 CREATE INTERN ERROR:', error);
       throw error;
     }
 
-    return data?.[0] || null;
+    return data?.[0] ?? null;
   }
 
-  // ---------------- GET ALL (WITH FILTERS) ----------------
-  async findAll(filters: any) {
-    let query = this.db.from('interns').select('*');
+  async findAll(filters: InternFilters): Promise<InternListRow[]> {
+    let query = this.db.from('interns').select(`
+      id,
+      user_id,
+      team_id,
+      created_at,
+      user:users!interns_user_id_fkey(
+        id,
+        github_username,
+        name,
+        email,
+        avatar_url
+      ),
+      reports(
+        id,
+        title,
+        period_start,
+        period_end,
+        submitted_at,
+        status
+      ),
+      issue_assignments(
+        id
+      )
+    `);
 
-    // Filter by team
     if (filters.teamId) {
       query = query.eq('team_id', filters.teamId);
     }
 
-    const { data, error } = await query;
+    const { data, error } = (await query) as {
+      data: InternListRow[] | null;
+      error: Error | null;
+    };
 
     if (error) {
       console.error('🔥 FIND ALL INTERNS ERROR:', error);
       throw error;
     }
 
-    let interns = data || [];
+    let interns: InternListRow[] = data ?? [];
 
-    // Filter by batch (via batch_interns join table)
     if (filters.batchId) {
-      const { data: batchInterns, error: batchError } = await this.db
-        .from('batch_interns')
-        .select('intern_id')
-        .eq('batch_id', filters.batchId);
-
-      if (batchError) {
-        console.error('🔥 BATCH FILTER ERROR:', batchError);
-        throw batchError;
+      const resolvedBatchId = await this.resolveBatchId(filters.batchId);
+      if (!resolvedBatchId) {
+        return [];
       }
 
-      const ids = batchInterns?.map((b) => b.intern_id) || [];
-      interns = interns.filter((i) => ids.includes(i.id));
+      const { data: batchInterns, error: batchError } = (await this.db
+        .from('batch_interns')
+        .select('intern_id')
+        .eq('batch_id', resolvedBatchId)) as {
+        data: BatchInternRow[] | null;
+        error: Error | null;
+      };
+
+      if (batchError) {
+        throw new BadRequestException(batchError.message);
+      }
+
+      const ids =
+        batchInterns?.map((batchIntern) => batchIntern.intern_id) ?? [];
+      interns = interns.filter((intern) => ids.includes(intern.id));
     }
 
     return interns;
   }
 
-  // ---------------- GET ONE ----------------
-  async findOne(id: string) {
-    const { data, error } = await this.db
+  async findOne(id: string): Promise<InternRow> {
+    const { data, error } = (await this.db
       .from('interns')
       .select('*')
-      .eq('id', id);
+      .eq('id', id)) as {
+      data: InternRow[] | null;
+      error: Error | null;
+    };
 
     if (error) {
       console.error('🔥 FIND INTERN ERROR:', error);
@@ -81,13 +202,15 @@ export class InternsService {
     return data[0];
   }
 
-  // ---------------- UPDATE INTERN ----------------
-  async update(id: string, dto: any) {
-    const { data, error } = await this.db
+  async update(id: string, dto: UpdateInternDto): Promise<InternRow> {
+    const { data, error } = (await this.db
       .from('interns')
       .update(dto)
       .eq('id', id)
-      .select();
+      .select()) as {
+      data: InternRow[] | null;
+      error: Error | null;
+    };
 
     if (error) {
       console.error('🔥 UPDATE INTERN ERROR:', error);
@@ -101,8 +224,7 @@ export class InternsService {
     return data[0];
   }
 
-  // ---------------- DELETE INTERN ----------------
-  async remove(id: string) {
+  async remove(id: string): Promise<{ message: string }> {
     const { error } = await this.db.from('interns').delete().eq('id', id);
 
     if (error) {
@@ -113,29 +235,31 @@ export class InternsService {
     return { message: 'Deleted successfully' };
   }
 
-  // ---------------- KODA PROFILE ----------------
-  async getProfile(id: string) {
-    // Get intern
+  async getProfile(id: string): Promise<{
+    intern: InternRow;
+    reports: Array<ReportRow & { issues: Issue[] }>;
+  }> {
     const intern = await this.findOne(id);
 
-    // Get reports
-    const { data: reports, error } = await this.db
+    const { data: reports, error } = (await this.db
       .from('reports')
       .select('*')
       .eq('intern_id', id)
-      .order('period_start', { ascending: false });
+      .order('period_start', { ascending: false })) as {
+      data: ReportRow[] | null;
+      error: Error | null;
+    };
 
     if (error) {
       console.error('🔥 PROFILE REPORTS ERROR:', error);
       throw error;
     }
 
-    // Attach GitHub issues per report period
     const enrichedReports = await Promise.all(
       (reports || []).map(async (report) => {
         const issues = await this.issuesService.findByInternId(id, {
-          period_start: report.period_start,
-          period_end: report.period_end,
+          period_start: report.period_start ?? undefined,
+          period_end: report.period_end ?? undefined,
         });
 
         return {
