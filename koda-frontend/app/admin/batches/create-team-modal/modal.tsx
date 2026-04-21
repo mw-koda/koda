@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { getUsers, type ApiUser } from "@/lib/api/users";
 import { teamsApi, type TeamDetail } from '@/lib/api/teams';
+import { toTitleCase } from '@/lib/utils';
 
 interface CreateTeamModalProps {
   isOpen: boolean;
@@ -84,10 +85,12 @@ export default function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTe
     setSubmitError(null);
 
     const formData = new FormData(e.currentTarget);
+    const rawName = formData.get('name') as string;
+    const teamName = toTitleCase(rawName);
     
     // Constructing the metadata payload
     const payload = {
-      name: formData.get('name') as string,
+      name: teamName,
       description: formData.get('description') as string,
       teamLeadId: teamLeadId || undefined,
       maxInterns: parseInt(formData.get('maxInterns') as string, 10),

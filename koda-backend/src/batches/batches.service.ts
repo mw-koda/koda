@@ -422,10 +422,15 @@ export class BatchesService {
   }
 
   private buildBatchPayload(input: CreateBatchDto | UpdateBatchDto) {
-    const name = input.name?.trim();
+    let name = input.name?.trim();
     if (!name) {
       throw new BadRequestException('Batch name is required.');
     }
+
+    name = name
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
 
     const description = input.description?.trim();
     const startDate = this.normalizeDate(input.startDate);
