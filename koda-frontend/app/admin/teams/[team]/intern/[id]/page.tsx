@@ -92,6 +92,7 @@ export default function AdminTeamInternProfilePage() {
       <InternProfileView
         internId={mockInternId}
         backLabel={`${teamName} Team Management`}
+        canManageReports={false}
       />
     );
   }

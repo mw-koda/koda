@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { roleRedirects, AppRole } from '@/lib/role-redirects';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { getPublicApiBaseUrl } from '@/lib/public-config';
+
+const API_URL = getPublicApiBaseUrl();
 
 export default function AuthCallbackPage() {
   const router = useRouter();

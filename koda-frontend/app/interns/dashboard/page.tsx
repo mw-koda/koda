@@ -1,16 +1,17 @@
 'use client';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { getAttendanceByInternId, interns, issues, reports } from '@/lib/mock-data';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-    FileText,
-    GitPullRequest,
-    TrendingDown,
-    TrendingUp,
-    Users,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  FileText,
+  GitPullRequest,
 } from 'lucide-react';
+import { interns, issues, reports, roleToUserMap, getAttendanceByInternId, getReportsByInternId } from '@/lib/mock-data';
 import Link from 'next/link';
 
 function StatCard({
@@ -104,6 +105,15 @@ function formatDuration(totalMinutes: number) {
 }
 
 export default function InternDashboardPage() {
+  const currentIntern = useMemo(() => {
+    const currentUser = roleToUserMap.intern;
+    return (
+      interns.find(
+        (intern) => intern.github === currentUser.github || intern.name === currentUser.name
+      ) || interns[0] || null
+    );
+  }, []);
+
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -116,23 +126,24 @@ export default function InternDashboardPage() {
 
   const recentIssues = [...issues]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 6);
+    .slice(0, 4);
 
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
-          Overview
-        </h1>
-        <p className="text-text-muted">{today}</p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
+              {currentIntern?.team ?? 'Intern Team'}
+            </h1>
+            <p className="text-text-primary">{currentIntern?.school ?? 'School not assigned'}</p>
+            <p className="text-text-muted">{today}</p>
+          </div>
+
+        </div>
       </div>
 
-      {/* Show Join Organization card for interns without an organization
-      {currentRole === 'intern' && (
-        <JoinOrganizationCard currentOrganizationId={userOrganizationId} />
-      )} */}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard
           title="Total Interns"
           value={interns.length}
@@ -232,7 +243,7 @@ export default function InternDashboardPage() {
             {interns.length > 0 && getAttendanceByInternId(interns[0].id).length > 0 ? (
               [...getAttendanceByInternId(interns[0].id)]
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .slice(0, 5)
+                .slice(0, 2)
                 .map((log) => (
                   <div
                     key={log.id}
@@ -282,116 +293,55 @@ export default function InternDashboardPage() {
         </Card>
       </div>
 
-      <Card className="bg-bg-surface border-border-color p-6 mb-8">
-        <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
-          Submitted Reports
-        </h2>
-        <div className="space-y-3">
-          {reports
-            .filter((r) => r.status === 'submitted' || r.status === 'reviewed')
-            .map((report) => (
-              <div
-                key={report.id}
-                className="p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-text-primary">
-                    {report.title}
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs flex-shrink-0 ${
-                      report.status === 'reviewed'
-                        ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
-                        : 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
-                    }`}
-                  >
-                    {report.status}
-                  </Badge>
-                </div>
-                <p className="text-xs text-text-muted mt-1">
-                  Score: {report.score ?? 'N/A'}
-                </p>
-              </div>
-            ))}
-        </div>
-      </Card>
-      <Card className="bg-bg-surface border-border-color p-6 mb-8">
-        <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
-          Attendance Log Summary
-        </h2>
-        <div className="space-y-3">
-          {interns.map((intern) => (
-            <div
-              key={intern.id}
-              className="p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <Avatar className="h-8 w-8 bg-bg-base border border-border-color flex-shrink-0">
-                    <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono text-xs font-semibold">
-                      {intern.avatarInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">
-                      {intern.name}
-                    </p>
-                    <p className="text-xs text-text-muted">{intern.role}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 ml-2">
-              
-                  <span className="text-xs text-text-muted font-mono">
-                    {intern.lastActive}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+
       <Card className="bg-bg-surface border-border-color p-6">
         <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
           Intern Status Summary
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {interns.map((intern) => (
-            <Link key={intern.id} href={`/interns/${intern.id}`}>
-              <div className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/50 transition-all card-glow cursor-pointer">
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
-                    <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
-                      {intern.avatarInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-text-primary truncate">
-                      {intern.name}
-                    </h3>
-                    <p className="text-xs text-text-muted mb-2">{intern.role}</p>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                          intern.reportStatus === 'submitted'
-                            ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
-                            : intern.reportStatus === 'reviewed'
-                              ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
-                              : 'bg-text-muted/10 text-text-muted border-text-muted/30'
-                        }`}
-                      >
-                        {intern.reportStatus}
-                      </Badge>
-                      <span className="text-xs text-text-muted font-mono">
-                        {intern.score}%
-                      </span>
+            (() => {
+              const latestReport = [...getReportsByInternId(intern.id)]
+                .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+
+              return (
+                <Link key={intern.id} href={`/interns/${intern.id}`}>
+                  <div className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/50 transition-all card-glow cursor-pointer">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
+                        <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
+                          {intern.avatarInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-text-primary truncate">
+                          {intern.name}
+                        </h3>
+                        <p className="text-xs text-text-muted mb-2">{intern.role}</p>
+                        <div className="mb-2 flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                              latestReport?.status === 'reviewed'
+                                ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
+                                : latestReport?.status === 'pending'
+                                  ? 'bg-text-muted/10 text-text-muted border-text-muted/30'
+                                  : 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
+                            }`}
+                          >
+                            {latestReport?.status ?? 'submitted'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-text-muted truncate">
+                          Recent report: {latestReport?.period ?? 'No submitted report yet'}
+                        </p>
+                        <p className="text-xs text-text-muted">{intern.lastActive}</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-text-muted">{intern.lastActive}</p>
                   </div>
-                </div>
-              </div>
-            </Link>
+                </Link>
+              );
+            })()
           ))}
         </div>
       </Card>

@@ -5,6 +5,7 @@ import { Copy, X, Calendar, Hash, Type, Users as UsersIcon, AlertCircle } from '
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { batchesApi } from '@/lib/api/batches';
+import { toTitleCase } from '@/lib/utils';
 
 interface CreateBatchModalProps {
   isOpen: boolean;
@@ -69,7 +70,7 @@ export default function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateB
     setIsLoading(true);
     try {
       await batchesApi.create({
-        name: batchName.trim(),
+        name: toTitleCase(batchName.trim()),
         description: description.trim() || undefined,
         startDate,
         endDate,
