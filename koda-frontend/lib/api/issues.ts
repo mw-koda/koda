@@ -53,16 +53,13 @@ export const issuesApi = {
   },
 
   async findAll(filters: IssueFilter = {}): Promise<PaginatedIssues> {
-    // 1. We will comment out the parameter building for now
-    /*
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined) params.append(key, String(value));
     });
-    */
 
-    // 2. Remove the `?${params}` from the URL so it makes a clean request
-    const response = await fetch(`${API_BASE_URL}/issues`, { 
+    const querySuffix = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/issues${querySuffix}`, {
       method: 'GET',
       headers: auth.headers(),
     });

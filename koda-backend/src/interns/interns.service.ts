@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { CreateInternDto } from './dto/create-intern.dto';
 import type { UpdateInternDto } from './dto/update-intern.dto';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -63,6 +67,35 @@ export class InternsService {
     return this.supabase.getClient();
   }
 
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
+  private async resolveBatchId(
+    batchIdentifier: string,
+  ): Promise<string | null> {
+    if (this.isUuid(batchIdentifier)) {
+      return batchIdentifier;
+    }
+
+    const { data, error } = (await this.db
+      .from('batches')
+      .select('id')
+      .eq('join_code', batchIdentifier.toUpperCase())
+      .maybeSingle()) as {
+      data: { id: string } | null;
+      error: Error | null;
+    };
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    return data?.id ?? null;
+  }
+
   async create(dto: CreateInternDto): Promise<InternRow | null> {
     const { data, error } = (await this.db
       .from('interns')
@@ -123,17 +156,21 @@ export class InternsService {
     let interns: InternListRow[] = data ?? [];
 
     if (filters.batchId) {
+      const resolvedBatchId = await this.resolveBatchId(filters.batchId);
+      if (!resolvedBatchId) {
+        return [];
+      }
+
       const { data: batchInterns, error: batchError } = (await this.db
         .from('batch_interns')
         .select('intern_id')
-        .eq('batch_id', filters.batchId)) as {
+        .eq('batch_id', resolvedBatchId)) as {
         data: BatchInternRow[] | null;
         error: Error | null;
       };
 
       if (batchError) {
-        console.error('🔥 BATCH FILTER ERROR:', batchError);
-        throw batchError;
+        throw new BadRequestException(batchError.message);
       }
 
       const ids =
