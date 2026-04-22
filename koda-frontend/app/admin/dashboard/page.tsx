@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react'; // Added for error state
-import * as mockData from '@/lib/mock-data';
 import { batchesApi, BatchSummary } from '@/lib/api/batches'; // Import the API
+import { getUsers, type ApiUser, type ApiUserStatus } from '@/lib/api/users';
 import AdminOnboardingView from '../batches/onboarding-modal/onboarding-view';
 
 function getUserStatusClass(status: string) {
@@ -27,6 +27,7 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const [batches, setBatches] = useState<BatchSummary[]>([]);
+  const [users, setUsers] = useState<ApiUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,8 +43,12 @@ export default function AdminDashboardPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await batchesApi.findAll();
-        setBatches(data);
+        const [batchData, userData] = await Promise.all([
+          batchesApi.findAll(),
+          getUsers(),
+        ]);
+        setBatches(batchData);
+        setUsers(userData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
         console.error('Error fetching dashboard data:', err);
@@ -64,8 +69,6 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // Users are still coming from mockData for now
-  const users = mockData.users ?? [];
   const showOnboarding = batches.length === 0;
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -75,12 +78,23 @@ export default function AdminDashboardPage() {
     day: 'numeric',
   });
 
-  const activeUsers = users.filter((user) => user.status === 'active');
-  const pendingUsers = users.filter((user) => user.status === 'pending');
+  const getUserStatus = (user: ApiUser): ApiUserStatus => {
+    if (user.status) {
+      return user.status;
+    }
+
+    return user.is_onboarded ? 'active' : 'pending';
+  };
+
+  const activeUsers = users.filter((user) => getUserStatus(user) === 'active');
+  const pendingUsers = users.filter((user) => getUserStatus(user) === 'pending');
   const interns = users.filter((user) => user.role === 'intern');
 
   const newestUsers = [...users]
-    .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
     .slice(0, 6);
 
   return (
@@ -151,17 +165,17 @@ export default function AdminDashboardPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-text-primary">
-                    {user.name}
+                    {user.name ?? user.github_username}
                   </p>
                   <p className="text-xs text-text-muted mt-1">
-                    {user.role} • Joined {user.joinedAt}
+                    {user.role} • Joined {new Date(user.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <Badge
                   variant="outline"
-                  className={`text-xs ${getUserStatusClass(user.status)}`}
+                  className={`text-xs ${getUserStatusClass(getUserStatus(user))}`}
                 >
-                  {user.status}
+                  {getUserStatus(user)}
                 </Badge>
               </div>
             </div>

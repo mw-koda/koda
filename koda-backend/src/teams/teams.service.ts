@@ -243,15 +243,7 @@ export class TeamsService {
     actorRole: Role,
   ): Promise<TeamDetail> {
     const team = await this.assertCanManageTeam(teamId, actorId, actorRole);
-<<<<<<< Updated upstream
-    const user = await this.getUserOrThrow(dto.userId);
-
-    if (dto.role === Role.INTERN) {
-      await this.assertInternBelongsToTeamBatch(user, team);
-    }
-=======
     await this.getUserOrThrow(dto.userId);
->>>>>>> Stashed changes
 
     if (dto.role === Role.INTERN) {
       await this.assertInternBelongsToTeamBatch(dto.userId, team);
@@ -398,18 +390,9 @@ export class TeamsService {
     let teamsQuery = supabase
       .from('teams')
       .select('id')
-<<<<<<< Updated upstream
-      .order('created_at', { ascending: false });
-
-    if (actorRole !== Role.ADMIN) {
-      teamsQuery = teamsQuery.eq('created_by', actorId);
-    }
-
-=======
       .eq('created_by', actorId)
       .order('created_at', { ascending: false });
 
->>>>>>> Stashed changes
     if (batchId) {
       teamsQuery = teamsQuery.eq('batch_id', batchId);
     }
@@ -743,11 +726,7 @@ export class TeamsService {
   }
 
   private async assertInternBelongsToTeamBatch(
-<<<<<<< Updated upstream
-    user: UserRow,
-=======
     userId: string,
->>>>>>> Stashed changes
     team: TeamRow,
   ): Promise<void> {
     if (!team.batch_id) {
@@ -756,15 +735,6 @@ export class TeamsService {
       );
     }
 
-<<<<<<< Updated upstream
-    const internId = await this.getOrCreateInternIdForUser(user);
-
-    const supabase = this.supabaseService.getClient();
-    const enrollmentResult = (await supabase
-      .from('batch_interns')
-      .select('id')
-      .eq('intern_id', internId)
-=======
     const supabase = this.supabaseService.getClient();
     const internResult = (await supabase
       .from('interns')
@@ -789,7 +759,6 @@ export class TeamsService {
       .from('batch_interns')
       .select('id')
       .eq('intern_id', internResult.data.id)
->>>>>>> Stashed changes
       .eq('batch_id', team.batch_id)
       .maybeSingle()) as unknown as {
       data: { id: string } | null;
@@ -807,69 +776,6 @@ export class TeamsService {
     }
   }
 
-<<<<<<< Updated upstream
-  private async getOrCreateInternIdForUser(user: UserRow): Promise<string> {
-    if (user.role !== Role.INTERN) {
-      throw new BadRequestException(
-        'Selected user must be onboarded as intern role to be added as an intern member.',
-      );
-    }
-
-    const supabase = this.supabaseService.getClient();
-    const internResult = (await supabase
-      .from('interns')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()) as unknown as {
-      data: InternByUserRow | null;
-      error: { message: string } | null;
-    };
-
-    if (internResult.error) {
-      throw new BadRequestException(internResult.error.message);
-    }
-
-    if (internResult.data) {
-      return internResult.data.id;
-    }
-
-    const insertResult = (await supabase
-      .from('interns')
-      .insert({ user_id: user.id })
-      .select('id')
-      .maybeSingle()) as unknown as {
-      data: InternByUserRow | null;
-      error: { message: string } | null;
-    };
-
-    if (insertResult.error) {
-      const retryResult = (await supabase
-        .from('interns')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle()) as unknown as {
-        data: InternByUserRow | null;
-        error: { message: string } | null;
-      };
-
-      if (retryResult.error || !retryResult.data) {
-        throw new BadRequestException(
-          retryResult.error?.message ?? insertResult.error.message,
-        );
-      }
-
-      return retryResult.data.id;
-    }
-
-    if (!insertResult.data) {
-      throw new BadRequestException('Failed to create intern record.');
-    }
-
-    return insertResult.data.id;
-  }
-
-=======
->>>>>>> Stashed changes
   private async assertCanManageTeam(
     teamId: string,
     actorId: string,
