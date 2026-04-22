@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import JoinBatchGatekeeperModal from '@/components/join-batch-gatekeeper-modal';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -105,6 +107,10 @@ function formatDuration(totalMinutes: number) {
 }
 
 export default function InternDashboardPage() {
+  const { user, isLoading } = useCurrentUser();
+  const [isMounted, setIsMounted] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+
   const currentIntern = useMemo(() => {
     const currentUser = roleToUserMap.intern;
     return (
@@ -113,6 +119,31 @@ export default function InternDashboardPage() {
       ) || interns[0] || null
     );
   }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || isLoading) {
+      return;
+    }
+
+    const storedBatchId = typeof window !== 'undefined' ? localStorage.getItem('userBatchId') : null;
+    const assignedBatchId = user?.batchId ?? user?.batch_id ?? storedBatchId;
+
+    setShowJoinModal(!assignedBatchId);
+  }, [isLoading, isMounted, user]);
+
+  if (!isMounted || isLoading) {
+    return <div className="p-8 text-text-muted">Loading dashboard...</div>;
+  }
+
+  const handleJoinBatch = async ({ batchCode, school }: { batchCode: string; school: string }) => {
+    localStorage.setItem('userBatchId', batchCode.trim());
+    localStorage.setItem('userSchool', school.trim());
+    setShowJoinModal(false);
+  };
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -130,6 +161,11 @@ export default function InternDashboardPage() {
 
   return (
     <div className="p-8">
+      <JoinBatchGatekeeperModal
+        isOpen={showJoinModal}
+        roleLabel="Intern"
+        onJoin={handleJoinBatch}
+      />
       <div className="mb-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
