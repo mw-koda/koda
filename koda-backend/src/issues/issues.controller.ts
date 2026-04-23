@@ -1,8 +1,14 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Role } from '../common/enums/role.enum';
 import { IssuesService, Issue } from './issues.service';
 import { IssueFilterDto } from './dto/issues.dto';
 
 @Controller('issues')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN, Role.TEAM_LEAD)
 export class IssuesController {
   constructor(private readonly issuesService: IssuesService) {}
 

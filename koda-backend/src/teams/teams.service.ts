@@ -390,7 +390,6 @@ export class TeamsService {
     let teamsQuery = supabase
       .from('teams')
       .select('id')
-      .eq('created_by', actorId)
       .order('created_at', { ascending: false });
 
     if (batchId) {
@@ -787,11 +786,6 @@ export class TeamsService {
       );
     }
 
-    const team = await this.getTeamOrThrow(teamId);
-    if (actorRole !== Role.ADMIN && team.created_by !== actorId) {
-      throw new ForbiddenException('You can only manage teams you created.');
-    }
-
-    return team;
+    return this.getTeamOrThrow(teamId);
   }
 }

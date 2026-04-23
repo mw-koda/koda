@@ -154,7 +154,7 @@ export default function AdminTeamManagementPage() {
           {team.name} Team Management
         </h1>
         <p className="text-text-muted mt-2">
-          Manage members for teams you created.
+          Manage members for any team in your scope.
         </p>
       </div>
 
