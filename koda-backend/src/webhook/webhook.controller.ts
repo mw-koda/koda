@@ -6,15 +6,18 @@ import {
   HttpCode,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { WebhookService } from './webhook.service';
 
 @Controller('webhook')
+@ApiTags('Webhook')
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
   @Post('github')
   @HttpCode(200)
+  @ApiOperation({ summary: 'Handle GitHub webhooks' })
   async handleGithubWebhook(
     @Headers('x-hub-signature-256') signature: string,
     @Headers('x-github-event') event: string,

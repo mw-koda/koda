@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { UserRecord } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -21,11 +22,15 @@ import { TeamsService, type TeamDashboardData } from './teams.service';
 
 @Controller('teams')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags('Teams')
+@ApiBearerAuth('bearer-auth')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Get()
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  @ApiOperation({ summary: 'List the current user teams' })
+  @ApiQuery({ name: 'batchId', required: false, type: String })
   findMine(
     @CurrentUser() user: UserRecord,
     @Query('batchId') batchId?: string,
@@ -35,6 +40,8 @@ export class TeamsController {
 
   @Post()
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  @ApiOperation({ summary: 'Create a team' })
+  @ApiBody({ type: CreateTeamDto })
   create(
     @Body() createTeamDto: CreateTeamDto,
     @CurrentUser() user: UserRecord,
@@ -44,6 +51,9 @@ export class TeamsController {
 
   @Post(':id/members')
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  @ApiOperation({ summary: 'Add a member to a team' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiBody({ type: AddTeamMemberDto })
   addMember(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() addTeamMemberDto: AddTeamMemberDto,
@@ -59,6 +69,9 @@ export class TeamsController {
 
   @Delete(':id/members/:userId')
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  @ApiOperation({ summary: 'Remove a member from a team' })
+  @ApiParam({ name: 'id', type: String })
+  @ApiParam({ name: 'userId', type: String })
   removeMember(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('userId', ParseUUIDPipe) userId: string,
@@ -69,6 +82,8 @@ export class TeamsController {
 
   @Get(':id/dashboard')
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  @ApiOperation({ summary: 'Get team dashboard data' })
+  @ApiParam({ name: 'id', type: String })
   getDashboard(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserRecord,
@@ -78,6 +93,8 @@ export class TeamsController {
 
   @Get(':id')
   @Roles(Role.ADMIN, Role.TEAM_LEAD)
+  @ApiOperation({ summary: 'Get a team by id' })
+  @ApiParam({ name: 'id', type: String })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserRecord,

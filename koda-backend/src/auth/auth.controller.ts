@@ -1,4 +1,5 @@
 import { Controller, Get, Req, UseGuards, Res, HttpCode } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { GithubAuthGuard } from './guards/github-auth.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -16,6 +17,7 @@ interface MeResponse {
 }
 
 @Controller('auth')
+@ApiTags('Auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -24,6 +26,7 @@ export class AuthController {
 
   @Get('github')
   @UseGuards(GithubAuthGuard)
+  @ApiOperation({ summary: 'Start GitHub authentication' })
   // Guard redirects to GitHub; this method body intentionally never executes.
   githubLogin(): void {
     return;
@@ -31,6 +34,7 @@ export class AuthController {
 
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
+  @ApiOperation({ summary: 'Handle GitHub authentication callback' })
   githubCallback(@Req() req: AuthenticatedRequest, @Res() res: Response): void {
     const token = this.authService.generateToken({
       id: req.user.id,
@@ -48,6 +52,8 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
+  @ApiBearerAuth('bearer-auth')
+  @ApiOperation({ summary: 'Get the authenticated user' })
   getMe(@CurrentUser() user: UserRecord): MeResponse {
     return { user };
   }
