@@ -100,7 +100,7 @@ export function Sidebar() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "fixed left-0 top-0 h-screen bg-bg-surface border-r border-border-color flex flex-col z-50 transition-all duration-300 ease-in-out group",
+        "fixed left-0 top-0 h-screen bg-bg-surface border-r border-border-color flex flex-col z-50 transition-all duration-300 ease-in-out group peer",
         isHovered ? "w-60 shadow-2xl" : "w-16"
       )}
     >

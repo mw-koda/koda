@@ -19,7 +19,7 @@ export function Header() {
   }, [displayName]);
 
   return (
-    <header className="fixed top-0 right-0 left-60 h-14 bg-bg-surface border-b border-border-color z-10">
+    <header className="fixed top-0 right-0 left-16 peer-hover:left-60 h-14 bg-bg-surface border-b border-border-color z-10 transition-[left] duration-300 ease-in-out">
       <div className="h-full px-6 flex items-center justify-end">
         <div className="flex items-center gap-3">
           <div className="text-right">

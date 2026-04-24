@@ -26,7 +26,7 @@ export function LayoutWrapper({ children }: { children: ReactNode }) {
       <ActivityTracker />
       <Sidebar />
       <Header />
-      <main className="ml-60 mt-14 min-h-screen">
+      <main className="ml-16 peer-hover:ml-60 mt-14 min-h-screen transition-[margin-left] duration-300 ease-in-out">
         {children}
       </main>
     </>
