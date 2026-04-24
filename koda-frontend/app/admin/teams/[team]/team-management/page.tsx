@@ -207,7 +207,7 @@ export default function AdminTeamManagementPage() {
         <Button
           onClick={handleAddMember}
           disabled={isSaving || !selectedUserId}
-          className="bg-accent-primary hover:bg-accent-secondary text-white"
+          className="bg-accent-primary hover:bg-accent-secondary text-black"
         >
           Add Member
         </Button>

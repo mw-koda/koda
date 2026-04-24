@@ -36,13 +36,15 @@ export default function InternDashboardRedirect() {
     return <div className="p-8 text-text-muted">Loading dashboard...</div>;
   }
 
-  const handleJoinBatch = async ({ batchCode, school }: { batchCode: string; school: string }) => {
+  const handleJoinBatch = async ({ batchCode, school }: { batchCode: string; school?: string }) => {
     try {
       // 1. Call real API to join batch in database
-      await internsApi.join(batchCode.trim(), school.trim());
+      await internsApi.join(batchCode.trim(), school?.trim());
       
       // 2. Fallback for school (as it is not yet in the schema but used for UI display)
-      localStorage.setItem('userSchool', school.trim());
+      if (school?.trim()) {
+        localStorage.setItem('userSchool', school.trim());
+      }
       
       // 3. Clear modal and redirect
       setShowJoinModal(false);

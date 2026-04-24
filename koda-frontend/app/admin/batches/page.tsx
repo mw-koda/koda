@@ -81,7 +81,7 @@ export default function AdminBatchesPage() {
         
         <Button 
           onClick={() => setIsCreateModalOpen(true)}
-          className="bg-accent-primary hover:bg-accent-primary/90 text-white gap-2 px-6"
+          className="bg-accent-primary hover:bg-accent-primary/90 text-black gap-2 px-6"
         >
           <Plus className="h-4 w-4" />
           Create New Batch

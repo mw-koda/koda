@@ -223,7 +223,7 @@ export default function CreateTeamModal({ batchId, isOpen, onClose, onSuccess }:
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-accent-primary hover:bg-accent-secondary text-white font-bold px-8 transition-all"
+              className="bg-accent-primary hover:bg-accent-secondary text-black font-normal px-8 transition-all"
             >
               {isSubmitting ? 'Initializing...' : 'Create Team'}
             </Button>

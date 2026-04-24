@@ -238,7 +238,7 @@ export default function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateB
             <Button 
               onClick={handleCreateBatch}
               disabled={isLoading}
-              className="flex-1 bg-accent-primary text-white hover:bg-accent-primary/90 font-bold disabled:opacity-50"
+              className="flex-1 bg-accent-primary text-black hover:bg-accent-primary/90 font-normal disabled:opacity-50"
             >
               {isLoading ? 'Creating...' : 'Create Batch'}
             </Button>

@@ -31,6 +31,8 @@ export interface UserRecord {
   batch_id?: string | null;
   school?: string | null;
   school_name?: string | null;
+  team_id?: string | null;
+  team_name?: string | null;
   created_at: string;
   updated_at: string;
 }

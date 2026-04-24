@@ -148,12 +148,13 @@ export default function InternDashboardPage() {
   useEffect(() => {
     if (!isMounted) return;
 
+    const isInternRole = user?.role === 'intern';
     const hasInternRecord = !!currentIntern;
-    const hasTeam = !!currentIntern?.team_id;
+    const hasTeam = !!(currentIntern?.team_id ?? user?.team_id);
     const assignedBatchId = user?.batchId ?? user?.batch_id ?? localStorage.getItem('userBatchId');
 
-    // If they have an intern record (joined batch) but no team, show modal
-    if (hasInternRecord && assignedBatchId && !hasTeam) {
+    // Team assignment gating applies to intern role only.
+    if (isInternRole && hasInternRecord && assignedBatchId && !hasTeam) {
       setShowNoTeamModal(true);
     } else {
       setShowNoTeamModal(false);
@@ -281,7 +282,7 @@ export default function InternDashboardPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
-              {`${currentIntern?.role || 'Team'} - ${currentIntern?.team_id}`}
+              {`${currentIntern?.role || 'Team'} - ${user?.team_name || currentIntern?.team_id || user?.team_id || 'Unassigned'}`}
             </h1>
             <p className="text-text-primary">{user?.school_name || user?.school || 'School not assigned'}</p>
             <p className="text-text-muted">{today}</p>

@@ -33,6 +33,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
           batch_interns (
             batch_id
           )
+        ),
+        team_members (
+          team_id,
+          role,
+          teams (
+            name
+          )
         )
       `,
       )
@@ -54,14 +61,28 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       ? batchInternsData[0]
       : batchInternsData;
 
+    const teamMembersData = data.team_members;
+    const teamMembers = Array.isArray(teamMembersData)
+      ? teamMembersData
+      : teamMembersData
+        ? [teamMembersData]
+        : [];
+    const internTeamMember = teamMembers.find(
+      (member: any) => member?.role === 'intern',
+    );
+    const teamData = internTeamMember?.teams;
+    const teamRecord = Array.isArray(teamData) ? teamData[0] : teamData;
+
     // Remove the joined objects and flatten to the UserRecord shape
-    const { interns, ...userFields } = data;
+    const { interns, team_members, ...userFields } = data;
 
     return {
       ...userFields,
       intern_id: internRecord?.id ?? null,
       batch_id: batchRecord?.batch_id ?? null,
       school: internRecord?.school ?? null,
+      team_id: internTeamMember?.team_id ?? null,
+      team_name: teamRecord?.name ?? null,
     };
   }
 }

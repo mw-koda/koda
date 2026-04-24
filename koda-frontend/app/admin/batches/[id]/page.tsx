@@ -132,6 +132,9 @@ export default function BatchDetailsPage({ params }: { params: { id: string } })
           <h1 className="mt-3 text-4xl font-display font-bold text-text-primary">
             {batch.name}
           </h1>
+          <p className="mt-2 text-sm text-text-muted">
+            Batch Code: <span className="font-mono text-text-primary">{batch.joinCode}</span>
+          </p>
           <p className="mt-3 max-w-3xl text-text-muted">
             Monitor the operating window, enrollment capacity, and delivery velocity for this batch.
           </p>
