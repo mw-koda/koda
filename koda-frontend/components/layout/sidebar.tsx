@@ -24,22 +24,12 @@ const adminNavigation = [
   { name: 'Batch Management', href: '/admin/batches', icon: Layers, match: 'prefix' },
 ];
 
-function isAdminNavItemActive(pathname: string, href: string) {
-  if (href === '/admin') {
-    return pathname === href;
-  }
-
-  return pathname === href || pathname.startsWith(href + '/');
-}
-
 function toAppRole(value: string | null | undefined): AppRole {
   if (value === 'admin' || value === 'coordinator' || value === 'intern' || value === 'team_lead') {
     return value;
   }
-
   return 'coordinator';
 }
-
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -51,6 +41,13 @@ export function Sidebar() {
     if (typeof window === 'undefined') return;
     setStoredRole(localStorage.getItem('selectedRole'));
   }, []);
+
+  // --- THE SYNC FIX ---
+  // This updates the global variable that your Dashboard layout should listen to.
+  useEffect(() => {
+    const width = isHovered ? '240px' : '64px';
+    document.documentElement.style.setProperty('--sidebar-width', width);
+  }, [isHovered]);
 
   const rawRole = toAppRole(user?.role ?? storedRole ?? 'coordinator');
   const normalizedRole: AppRole = rawRole === 'team_lead' ? 'admin' : rawRole;
@@ -101,7 +98,7 @@ export function Sidebar() {
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         "fixed left-0 top-0 h-screen bg-bg-surface border-r border-border-color flex flex-col z-50 transition-all duration-300 ease-in-out group",
-        isHovered ? "w-60 shadow-2xl" : "w-16"
+        isHovered ? "w-[240px] shadow-2xl" : "w-16"
       )}
     >
       <div className="p-4 border-b border-border-color flex flex-col items-center overflow-hidden min-h-[110px]">
