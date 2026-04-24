@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { deslugifyTeamName } from '@/lib/team-utils';
-import { teamsApi } from '@/lib/api/teams';
+import { Card } from '@/components/ui/card';
 import { useAllIssues } from '@/hooks/use-all-issues';
+import { teamsApi } from '@/lib/api/teams';
+import { deslugifyTeamName } from '@/lib/team-utils';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 type IssueStatusFilter = 'all' | 'open' | 'in_progress' | 'closed';
 
@@ -114,7 +116,14 @@ export default function AdminTeamIssueTrackingPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
+      <div className="mb-8"> {/* 1. BACK BUTTON ADDED HERE */}
+        <Link
+          href="/admin/batches"
+          className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-text-muted hover:text-accent-primary transition-colors w-fit group mb-4"
+        >
+          <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
+          Back to Batch Management
+        </Link>
         <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
           {teamName} Issue Tracking
         </h1>
