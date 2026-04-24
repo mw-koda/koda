@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { issuesApi, Issue } from '@/lib/api/issues';
+import { attendanceApi, type AttendanceSummary } from '@/lib/api/attendance';
 import { auth } from '@/lib/auth';
 import { getPublicApiBaseUrl } from '@/lib/public-config';
 
@@ -34,7 +35,8 @@ export function useInternDashboard() {
   const [recentIssues, setRecentIssues] = useState<Issue[]>([]);
   const [openIssuesCount, setOpenIssuesCount] = useState(0);
   const [closedIssuesCount, setClosedIssuesCount] = useState(0);
-  const [internReports, setInternReports] = useState<Record<string, Report[]>>({});
+  const [attendanceSummary, setAttendanceSummary] =
+    useState<AttendanceSummary | null>(null);
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,23 +102,18 @@ export function useInternDashboard() {
           }
         }
 
-        // 4. Fetch reports for each intern to determine pending status and latest report
-        const reportsMap: Record<string, Report[]> = {};
-        await Promise.all(
-          fetchedInterns.map(async (intern) => {
-            try {
-              const reportsRes = await fetch(`${API_BASE_URL}/reports/intern/${intern.id}`, {
-                headers: auth.headers(),
-              });
-              if (reportsRes.ok) {
-                reportsMap[intern.id] = await reportsRes.json();
-              }
-            } catch (e) {
-              console.error(`Failed to fetch reports for intern ${intern.id}`, e);
-            }
-          })
-        );
-        setInternReports(reportsMap);
+        // 4. Fetch attendance summary for the current intern
+        if (user.intern_id) {
+          try {
+            const summary = await attendanceApi.findByInternId(user.intern_id);
+            setAttendanceSummary(summary);
+          } catch (e) {
+            console.error('Failed to fetch attendance summary', e);
+            setAttendanceSummary(null);
+          }
+        } else {
+          setAttendanceSummary(null);
+        }
 
       } catch (err: any) {
         setError(err.message || 'Failed to fetch dashboard data');
@@ -133,7 +130,7 @@ export function useInternDashboard() {
     recentIssues,
     openIssuesCount,
     closedIssuesCount,
-    internReports,
+    attendanceSummary,
     isLoading: isLoading || userLoading,
     error,
     user

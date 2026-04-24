@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   FileText,
   GitPullRequest,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useInternDashboard } from '@/hooks/use-intern-dashboard';
@@ -103,13 +104,23 @@ function formatTime(dateStr: string) {
 }
 
 function formatDuration(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+  const roundedMinutes = Math.round(totalMinutes);
+  const hours = Math.floor(roundedMinutes / 60);
+  const minutes = roundedMinutes % 60;
   return `${hours}h ${minutes}m`;
 }
 
 export default function InternDashboardPage() {
-  const { interns, recentIssues, openIssuesCount, closedIssuesCount, internReports, isLoading, error, user } = useInternDashboard();
+  const {
+    interns,
+    recentIssues,
+    openIssuesCount,
+    closedIssuesCount,
+    attendanceSummary,
+    isLoading,
+    error,
+    user,
+  } = useInternDashboard();
   
   const [isMounted, setIsMounted] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -142,10 +153,6 @@ export default function InternDashboardPage() {
     setSummaryBatchId(assignedBatchId ? String(assignedBatchId) : undefined);
   }, [isLoading, isMounted, user]);
 
-  if (!isMounted || isLoading) {
-    return <div className="p-8 text-text-muted">Loading dashboard...</div>;
-  }
-
   const handleJoinBatch = async ({ batchCode, school }: { batchCode: string; school: string }) => {
     try {
       await internsApi.join(batchCode.trim(), school.trim());
@@ -166,12 +173,22 @@ export default function InternDashboardPage() {
     day: 'numeric',
   });
 
-  if (isLoading) {
-    return (
-      <div className="p-8 flex justify-center items-center h-full">
-        <div className="text-text-muted animate-pulse">Loading dashboard data...</div>
-      </div>
+  const sortedAttendance = useMemo(() => {
+    return [...(attendanceSummary?.logs || [])].sort(
+      (a, b) => new Date(b.timeIn).getTime() - new Date(a.timeIn).getTime()
     );
+  }, [attendanceSummary]);
+
+  const totalMinutes = attendanceSummary?.totalHours
+    ? Math.round(attendanceSummary.totalHours * 60)
+    : 0;
+
+  const pendingReportsCount = statusInterns.filter(
+    (intern) => intern.reportStatus === 'pending',
+  ).length;
+
+  if (!isMounted || isLoading) {
+    return <div className="p-8 text-text-muted">Loading dashboard...</div>;
   }
 
   if (error) {
@@ -183,11 +200,6 @@ export default function InternDashboardPage() {
       </div>
     );
   }
-
-  // Calculate pending reports across all interns in the batch
-  const pendingReportsCount = Object.values(internReports)
-    .flat()
-    .filter(r => r.status === 'pending' || r.status === 'draft').length;
 
   return (
     <div className="p-8">
@@ -286,10 +298,10 @@ export default function InternDashboardPage() {
                 Attendance Log
               </h2>
               <p className="text-xs text-text-muted mt-1">
-                Total Hours/Minutes Served
+                Total Rendered Time
               </p>
               <p className="text-2xl font-mono font-semibold text-text-primary mt-2">
-                0h 0m
+                {formatDuration(totalMinutes)}
               </p>
             </div>
             <button className="px-3 py-1.5 text-xs font-semibold text-text-primary border border-border-color rounded-md hover:bg-bg-elevated transition-colors">
@@ -297,10 +309,50 @@ export default function InternDashboardPage() {
             </button>
           </div>
 
-          <div className="space-y-3">
-             <p className="text-sm text-text-muted text-center py-6">
-                No attendance logs found. Attendance tracking is coming soon.
-             </p>
+          <div className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
+            {sortedAttendance.length > 0 ? (
+              sortedAttendance.map((log) => (
+                <div
+                  key={log.id}
+                  className="p-4 bg-bg-elevated rounded-lg border border-border-color"
+                >
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <p className="text-sm font-semibold text-text-primary">
+                      {formatDate(log.timeIn.slice(0, 10))}
+                    </p>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-mono bg-accent-primary/5 text-accent-primary border-accent-primary/20"
+                    >
+                      {formatDuration(log.renderedHours ? log.renderedHours * 60 : 0)}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] uppercase font-mono text-text-muted mb-1">
+                        Time In
+                      </p>
+                      <p className="text-sm text-text-primary font-mono bg-bg-surface px-2 py-1 rounded">
+                        {formatTime(log.timeIn)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-mono text-text-muted mb-1">
+                        Time Out
+                      </p>
+                      <p className="text-sm text-text-primary font-mono bg-bg-surface px-2 py-1 rounded">
+                        {log.timeOut ? formatTime(log.timeOut) : '--:--'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
+                <Calendar className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
+                <p className="text-sm text-text-muted">No attendance logs found.</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>
