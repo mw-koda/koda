@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -66,7 +66,6 @@ const monthlySchema = z.object({
   traineeName: z.string().min(1, 'Trainee name is required'),
   ojtId: z.string().min(1, 'OJT ID is required'),
   companyName: z.string().min(1, 'Company name is required'),
-  companyName2: z.string().min(1, 'Second company name is optional').optional(),
   periodStarts: z.string().min(1, 'Period start is required'),
   periodEnds: z.string().min(1, 'Period end is required'),
   monthlyLog: z.array(z.object({
@@ -85,6 +84,9 @@ interface ReportFormModalProps {
   onOpenChange: (open: boolean) => void;
   internId: string;
   onSuccess?: () => void;
+  initialType?: ReportType;
+  lockTypeSelection?: boolean;
+  showDoLater?: boolean;
 }
 
 export function ReportFormModal({
@@ -92,11 +94,16 @@ export function ReportFormModal({
   onOpenChange,
   internId,
   onSuccess,
+  initialType,
+  lockTypeSelection = false,
+  showDoLater = false,
 }: ReportFormModalProps) {
   const [step, setStep] = useState<'type' | 'form' | 'success'>('type');
   const [selectedType, setSelectedType] = useState<ReportType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [missingAccomplishmentWeeks, setMissingAccomplishmentWeeks] = useState<string[]>([]);
+  const [isAccomplishmentWarningOpen, setIsAccomplishmentWarningOpen] = useState(false);
 
   // EOD Form
   const eodForm = useForm<z.infer<typeof eodSchema>>({
@@ -151,8 +158,7 @@ export function ReportFormModal({
       title: '',
       traineeName: '',
       ojtId: '',
-      companyName: '',
-      companyName2: '',
+      companyName: 'Metawatt LLC',
       totalWorkHours: '',
       monthlyLog: [
         { week: 'Week 1', workTimes: '', totalHours: '', workAccomplished: '' },
@@ -171,7 +177,7 @@ export function ReportFormModal({
     name: 'monthlyLog'
   });
 
-  const handleTypeSelect = (type: ReportType) => {
+  const initializeType = (type: ReportType) => {
     setSelectedType(type);
     setStep('form');
     
@@ -183,6 +189,18 @@ export function ReportFormModal({
       if (type === 'monthly') monthlyForm.setValue('title', `Monthly Report - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`);
     }, 0);
   };
+
+  const handleTypeSelect = (type: ReportType) => {
+    initializeType(type);
+  };
+
+  useEffect(() => {
+    if (!isOpen || !initialType) {
+      return;
+    }
+
+    initializeType(initialType);
+  }, [initialType, isOpen]);
 
 
   const submitEod = async (values: z.infer<typeof eodSchema>) => {
@@ -260,6 +278,21 @@ ${logTable}
   };
 
   const submitMonthly = async (values: z.infer<typeof monthlySchema>) => {
+    const missingWeeks = values.monthlyLog
+      .filter((log) => {
+        const hasWorkTime = log.workTimes.trim().length > 0;
+        const hasHours = log.totalHours.trim().length > 0;
+        const hasAccomplishment = log.workAccomplished.trim().length > 0;
+        return (hasWorkTime || hasHours) && !hasAccomplishment;
+      })
+      .map((log) => log.week);
+
+    if (missingWeeks.length > 0) {
+      setMissingAccomplishmentWeeks(missingWeeks);
+      setIsAccomplishmentWarningOpen(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const logTable = values.monthlyLog.map(l => 
@@ -268,7 +301,7 @@ ${logTable}
 
       const content = `
 **Trainee:** ${values.traineeName} (ID: ${values.ojtId})
-**Company:** ${values.companyName} ${values.companyName2 ? `/ ${values.companyName2}` : ''}
+**Company:** ${values.companyName}
 **Total Hours:** ${values.totalWorkHours}
 
 ### Monthly Summary
@@ -320,7 +353,7 @@ ${logTable}
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'type' && (
+        {step === 'type' && !lockTypeSelection && (
           <div className="grid grid-cols-1 gap-3 pt-4">
             <button type="button" onClick={() => handleTypeSelect('eod')} className="p-4 text-left border border-border-color rounded-lg bg-bg-elevated hover:border-accent-primary transition-all group">
               <div className="flex items-center justify-between"><p className="text-sm font-bold text-text-primary group-hover:text-accent-primary transition-colors">EOD Report</p><Calendar className="h-4 w-4 text-text-muted" /></div>
@@ -347,10 +380,10 @@ ${logTable}
               <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Date</label><Input type="date" {...eodForm.register('date')} /></div>
               <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Time Spent</label><Input placeholder="e.g. 8h 30m" {...eodForm.register('timeSpent')} /></div>
             </div>
-            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Task Completed</label><Textarea rows={3} {...eodForm.register('taskCompleted')} /></div>
-            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Key Success</label><Textarea rows={2} {...eodForm.register('keySuccess')} /></div>
-            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Main Challenges</label><Textarea rows={2} {...eodForm.register('mainChallenges')} /></div>
-            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Plans for Tomorrow</label><Textarea rows={2} {...eodForm.register('plansForTomorrow')} /></div>
+            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Task Completed</label><Textarea rows={3} className="bg-bg-elevated border-border-color" {...eodForm.register('taskCompleted')} /></div>
+            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Key Success</label><Textarea rows={2} className="bg-bg-elevated border-border-color" {...eodForm.register('keySuccess')} /></div>
+            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Main Challenges</label><Textarea rows={2} className="bg-bg-elevated border-border-color" {...eodForm.register('mainChallenges')} /></div>
+            <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Plans for Tomorrow</label><Textarea rows={2} className="bg-bg-elevated border-border-color" {...eodForm.register('plansForTomorrow')} /></div>
             
             <div className="space-y-4 pt-2">
               <p className="text-sm font-semibold text-text-primary font-mono uppercase tracking-widest">Ratings (1-10)</p>
@@ -367,7 +400,20 @@ ${logTable}
             </div>
 
             <div className="flex gap-3 pt-4 border-t border-border-color">
-              <Button type="button" variant="outline" className="flex-1 font-mono uppercase tracking-widest text-xs" onClick={() => setStep('type')}>Back</Button>
+              {lockTypeSelection ? (
+                showDoLater ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 font-mono uppercase tracking-widest text-xs"
+                    onClick={handleClose}
+                  >
+                    Do it later
+                  </Button>
+                ) : null
+              ) : (
+                <Button type="button" variant="outline" className="flex-1 font-mono uppercase tracking-widest text-xs" onClick={() => setStep('type')}>Back</Button>
+              )}
               <Button type="submit" className="flex-1 bg-accent-primary text-bg-base hover:bg-accent-primary/90 font-mono uppercase tracking-widest text-xs" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Submit EOD'}</Button>
             </div>
           </form>
@@ -426,9 +472,9 @@ ${logTable}
               <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Trainee Name</label><Input {...monthlyForm.register('traineeName')} /></div>
               <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">OJT ID</label><Input {...monthlyForm.register('ojtId')} /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Company Name 1</label><Input {...monthlyForm.register('companyName')} /></div>
-              <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Company Name 2 (Optional)</label><Input {...monthlyForm.register('companyName2')} /></div>
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-mono text-text-muted">Company Name</label>
+              <Input {...monthlyForm.register('companyName')} readOnly />
             </div>
             
             <div className="border border-border-color rounded-lg overflow-hidden">
@@ -442,7 +488,14 @@ ${logTable}
                       <td className="p-2 text-text-primary font-bold whitespace-nowrap">{monthlyForm.getValues(`monthlyLog.${idx}.week`)}</td>
                       <td className="p-2"><input placeholder="8:30-5:30" {...monthlyForm.register(`monthlyLog.${idx}.workTimes` as const)} className="bg-transparent outline-none w-full text-text-primary" /></td>
                       <td className="p-2"><input placeholder="0h" {...monthlyForm.register(`monthlyLog.${idx}.totalHours` as const)} className="bg-transparent outline-none w-full text-text-primary" /></td>
-                      <td className="p-2"><input placeholder="..." {...monthlyForm.register(`monthlyLog.${idx}.workAccomplished` as const)} className="bg-transparent outline-none w-full text-text-primary" /></td>
+                      <td className="p-2">
+                        <textarea
+                          rows={2}
+                          placeholder="..."
+                          {...monthlyForm.register(`monthlyLog.${idx}.workAccomplished` as const)}
+                          className="bg-transparent outline-none w-full text-text-primary resize-none whitespace-pre-wrap"
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -466,6 +519,32 @@ ${logTable}
           </div>
         )}
       </DialogContent>
+      <Dialog open={isAccomplishmentWarningOpen} onOpenChange={setIsAccomplishmentWarningOpen}>
+        <DialogContent className="bg-bg-surface border-border-color max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-text-primary text-lg font-mono">
+              Missing Accomplishments
+            </DialogTitle>
+            <DialogDescription className="text-text-muted">
+              Add accomplishments for the weeks below before submitting.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-text-primary">
+            {missingAccomplishmentWeeks.map((week) => (
+              <div key={week} className="rounded-md border border-border-color bg-bg-elevated px-3 py-2">
+                {week}
+              </div>
+            ))}
+          </div>
+          <Button
+            type="button"
+            className="w-full bg-accent-primary text-bg-base hover:bg-accent-primary/90 font-mono uppercase tracking-widest text-xs"
+            onClick={() => setIsAccomplishmentWarningOpen(false)}
+          >
+            Got it
+          </Button>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

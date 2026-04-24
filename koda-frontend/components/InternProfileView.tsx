@@ -98,6 +98,7 @@ export default function InternProfileView({
 
   const [isReportViewOpen, setIsReportViewOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null);
+  const [forceEodReport, setForceEodReport] = useState(false);
 
   const [isTimingIn, setIsTimingIn] = useState(false);
   const [isTimingOut, setIsTimingOut] = useState(false);
@@ -166,6 +167,9 @@ export default function InternProfileView({
     try {
       await attendanceApi.timeOut();
       await refreshAttendance();
+      setIsAttendanceModalOpen(false);
+      setForceEodReport(true);
+      setIsAddReportModalOpen(true);
     } catch (err: any) {
       alert(err.message || 'Failed to clock out');
     } finally {
@@ -421,9 +425,17 @@ export default function InternProfileView({
       {/* Add Report Modal */}
       <ReportFormModal
         isOpen={isAddReportModalOpen}
-        onOpenChange={setIsAddReportModalOpen}
+        onOpenChange={(open) => {
+          setIsAddReportModalOpen(open);
+          if (!open) {
+            setForceEodReport(false);
+          }
+        }}
         internId={internId}
         onSuccess={refreshData}
+        initialType={forceEodReport ? 'eod' : undefined}
+        lockTypeSelection={forceEodReport}
+        showDoLater={forceEodReport}
       />
 
       <ReportViewModal
