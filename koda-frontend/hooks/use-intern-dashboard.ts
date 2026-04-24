@@ -11,12 +11,20 @@ const API_BASE_URL = getPublicApiBaseUrl();
 
 export interface Intern {
   id: string;
-  name: string;
-  github_username: string;
-  role: string;
+  user_id: string;
+  name?: string;
+  github_username?: string;
+  role?: string;
   team_id?: string;
   batch_id?: string;
   avatar_url?: string;
+  user?: {
+    id: string;
+    github_username: string;
+    name: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  };
 }
 
 export interface Report {

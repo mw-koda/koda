@@ -50,7 +50,6 @@ export const auth = {
   headers(): Record<string, string> {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
-      this.logoutAndRedirect();
       return {};
     }
 

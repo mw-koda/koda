@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { auth } from '@/lib/auth';
 import {
   TrendingUp,
   TrendingDown,
@@ -17,6 +19,10 @@ import Link from 'next/link';
 import { useInternDashboard } from '@/hooks/use-intern-dashboard';
 import { useInterns } from '@/hooks/use-interns';
 import { internsApi } from '@/lib/api/interns';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 
 function StatCard({
   title,
@@ -124,6 +130,7 @@ export default function InternDashboardPage() {
   
   const [isMounted, setIsMounted] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showNoTeamModal, setShowNoTeamModal] = useState(false);
   const [summaryBatchId, setSummaryBatchId] = useState<string | undefined>(undefined);
 
   const {
@@ -134,8 +141,24 @@ export default function InternDashboardPage() {
 
   const currentIntern = useMemo(() => {
     if (!user) return null;
-    return interns.find((i) => i.id === user.id || i.github_username === user.github_username) || null;
+    return interns.find((i) => i.user_id === user.id || i.user?.github_username === user.github_username) || null;
   }, [interns, user]);
+
+  // Check if intern has team assignment
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const hasInternRecord = !!currentIntern;
+    const hasTeam = !!currentIntern?.team_id;
+    const assignedBatchId = user?.batchId ?? user?.batch_id ?? localStorage.getItem('userBatchId');
+
+    // If they have an intern record (joined batch) but no team, show modal
+    if (hasInternRecord && assignedBatchId && !hasTeam) {
+      setShowNoTeamModal(true);
+    } else {
+      setShowNoTeamModal(false);
+    }
+  }, [isMounted, currentIntern, user]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -164,6 +187,10 @@ export default function InternDashboardPage() {
       console.error('Failed to join batch:', err);
       alert(err.message || 'Failed to join batch. Please check your code.');
     }
+  };
+
+  const handleLogout = () => {
+    auth.logoutAndRedirect();
   };
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -208,11 +235,53 @@ export default function InternDashboardPage() {
         roleLabel="Intern"
         onJoin={handleJoinBatch}
       />
-      <div className="mb-8">
+      <Dialog open={showNoTeamModal} onOpenChange={(open) => {
+        // Prevent closing the modal - it should only close when team is assigned
+        if (open === false) return;
+      }}>
+        <DialogContent className="bg-bg-surface border-border-color sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()} hideCloseButton>
+          <div className="text-center">
+            <h2 className="text-text-primary font-mono text-lg font-semibold">
+              Team Assignment Pending
+            </h2>
+            <p className="text-text-muted text-sm mt-1">
+              Awaiting Team Lead Assignment
+            </p>
+          </div>
+
+          <div className="space-y-6 py-6">
+            <div className="text-center space-y-4">
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-accent-primary/10 border-2 border-accent-primary/30">
+                <div className="h-8 w-8 border-2 border-accent-primary/30 border-t-accent-primary rounded-full animate-spin" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text-primary mb-2">
+                  Please wait for your Team Lead to assign you to a team.
+                </p>
+                <p className="text-xs text-text-muted">
+                  Once assigned, you'll see your team name on this dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              onClick={handleLogout}
+              className="w-full bg-accent-danger hover:bg-accent-danger/90 text-white"
+            >
+              Logout
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {!showNoTeamModal && (
+      <><div className="mb-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
-              {currentIntern?.role || 'Intern'} Dashboard
+              {`${currentIntern?.role || 'Team'} - ${currentIntern?.team_id}`}
             </h1>
             <p className="text-text-primary">{user?.school_name || user?.school || 'School not assigned'}</p>
             <p className="text-text-muted">{today}</p>
@@ -419,6 +488,7 @@ export default function InternDashboardPage() {
           </p>
         )}
       </Card>
+      </> )}
     </div>
   );
 }
