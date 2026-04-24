@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
+import { ActivityTracker } from './activity-tracker';
 
 export function LayoutWrapper({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -12,11 +13,17 @@ export function LayoutWrapper({ children }: { children: ReactNode }) {
   const isAuthRoute = pathname?.startsWith('/login') || pathname?.startsWith('/auth');
 
   if (isAuthRoute) {
-    return <>{children}</>;
+    return (
+      <>
+        <ActivityTracker />
+        {children}
+      </>
+    );
   }
 
   return (
     <>
+      <ActivityTracker />
       <Sidebar />
       <Header />
       <main className="ml-60 mt-14 min-h-screen">

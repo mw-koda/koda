@@ -15,7 +15,7 @@ type ReportRow = {
   id: string;
   intern_id: string;
   status: string;
-  created_at: string | null;
+  submitted_at: string | null;
 };
 
 type IssueRow = {
@@ -30,7 +30,7 @@ type PerformanceRow = {
   id: string;
   intern_id: string;
   score: number;
-  created_at: string | null;
+  evaluated_at: string | null;
 };
 
 @Injectable()
@@ -72,8 +72,8 @@ export class DashboardService {
     const supabase = this.supabaseService.getClient();
     let trendQuery = supabase
       .from('performance_metrics')
-      .select('score, created_at, intern_id')
-      .order('created_at', { ascending: true });
+      .select('score, evaluated_at, intern_id')
+      .order('evaluated_at', { ascending: true });
 
     if (internIds) {
       trendQuery = trendQuery.in('intern_id', internIds);
@@ -89,11 +89,11 @@ export class DashboardService {
     const weeklyAggregates = new Map<string, { sum: number; count: number }>();
 
     for (const row of (data ?? []) as PerformanceRow[]) {
-      if (typeof row.score !== 'number' || !row.created_at) {
+      if (typeof row.score !== 'number' || !row.evaluated_at) {
         continue;
       }
 
-      const week = this.getIsoWeekKey(row.created_at);
+      const week = this.getIsoWeekKey(row.evaluated_at);
       if (!week) {
         continue;
       }
@@ -263,9 +263,9 @@ export class DashboardService {
     const supabase = this.supabaseService.getClient();
     let reportsQuery = supabase
       .from('reports')
-      .select('id, intern_id, status, created_at')
+      .select('id, intern_id, status, submitted_at')
       .eq('status', 'submitted')
-      .order('created_at', { ascending: false })
+      .order('submitted_at', { ascending: false })
       .limit(40);
 
     if (internIds) {
@@ -279,11 +279,11 @@ export class DashboardService {
     }
 
     return ((data ?? []) as ReportRow[])
-      .filter((row) => !!row.created_at)
+      .filter((row) => !!row.submitted_at)
       .map((row) => ({
         type: 'report_submitted',
         description: `Report ${row.id} submitted`,
-        date: row.created_at as string,
+        date: row.submitted_at as string,
         internId: row.intern_id,
         teamId,
       }));
@@ -367,8 +367,8 @@ export class DashboardService {
     const supabase = this.supabaseService.getClient();
     let evaluationsQuery = supabase
       .from('performance_metrics')
-      .select('id, intern_id, score, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, intern_id, score, evaluated_at')
+      .order('evaluated_at', { ascending: false })
       .limit(40);
 
     if (internIds) {
@@ -382,11 +382,11 @@ export class DashboardService {
     }
 
     return ((data ?? []) as PerformanceRow[])
-      .filter((row) => !!row.created_at)
+      .filter((row) => !!row.evaluated_at)
       .map((row) => ({
         type: 'evaluation_added',
         description: `Evaluation added with score ${row.score}`,
-        date: row.created_at as string,
+        date: row.evaluated_at as string,
         internId: row.intern_id,
         teamId,
       }));

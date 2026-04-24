@@ -113,7 +113,7 @@ export default function CoordinatorDashboardPage() {
     interns: schoolScopedInterns,
     isLoading: isInternsLoading,
     error: internsError,
-  } = useInterns(undefined, safeBatchId);
+  } = useInterns(safeBatchId);
   const { issues: allIssues, isLoading: isIssuesLoading, error: issuesError } =
     useAllIssues();
 

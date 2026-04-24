@@ -7,7 +7,7 @@ create index if not exists teams_batch_id_idx on public.teams(batch_id);
 with inferred_batch as (
   select
     t.id as team_id,
-    min(bi.batch_id) as batch_id,
+    min(bi.batch_id::text)::uuid as batch_id,
     count(distinct bi.batch_id) as batch_count
   from public.teams t
   join public.team_members tm on tm.team_id = t.id

@@ -392,6 +392,11 @@ export class TeamsService {
       .select('id')
       .order('created_at', { ascending: false });
 
+    // Admins can see all teams in a batch; team leads only see their own.
+    if (actorRole !== Role.ADMIN) {
+      teamsQuery = teamsQuery.eq('created_by', actorId);
+    }
+
     if (batchId) {
       teamsQuery = teamsQuery.eq('batch_id', batchId);
     }

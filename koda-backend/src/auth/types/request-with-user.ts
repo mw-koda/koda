@@ -1,9 +1,6 @@
 import { Request } from 'express';
-import { Role } from '../../common/enums/role.enum';
+import type { UserRecord } from '../auth.service';
 
 export interface RequestWithUser extends Request {
-  user: {
-    id: string;
-    role: Role;
-  };
+  user: UserRecord;
 }

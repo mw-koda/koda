@@ -24,14 +24,44 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     const response = await client
       .from('users')
-      .select(USER_SELECT_FIELDS)
+      .select(
+        `
+        ${USER_SELECT_FIELDS},
+        interns (
+          id,
+          school,
+          batch_interns (
+            batch_id
+          )
+        )
+      `,
+      )
       .eq('id', payload.sub)
-      .single(); // explicit row shape cast to avoid unsafe any from the generic Supabase client
+      .single();
 
     if (response.error || !response.data) {
       throw new UnauthorizedException('User not found');
     }
 
-    return response.data;
+    const data = response.data as any;
+
+    // Handle both array and object responses for joins
+    const internData = data.interns;
+    const internRecord = Array.isArray(internData) ? internData[0] : internData;
+
+    const batchInternsData = internRecord?.batch_interns;
+    const batchRecord = Array.isArray(batchInternsData)
+      ? batchInternsData[0]
+      : batchInternsData;
+
+    // Remove the joined objects and flatten to the UserRecord shape
+    const { interns, ...userFields } = data;
+
+    return {
+      ...userFields,
+      intern_id: internRecord?.id ?? null,
+      batch_id: batchRecord?.batch_id ?? null,
+      school: internRecord?.school ?? null,
+    };
   }
 }

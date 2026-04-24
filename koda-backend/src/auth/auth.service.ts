@@ -27,6 +27,10 @@ export interface UserRecord {
   avatar_url: string | null;
   role: Role;
   is_onboarded: boolean;
+  intern_id?: string | null;
+  batch_id?: string | null;
+  school?: string | null;
+  school_name?: string | null;
   created_at: string;
   updated_at: string;
 }

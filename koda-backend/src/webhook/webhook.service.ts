@@ -77,6 +77,8 @@ export class WebhookService {
       github_repo_id: String(repo.id),
       owner: (repo.owner as Record<string, unknown>).login as string,
       name: repo.name as string,
+      full_name: repo.full_name as string,
+      html_url: repo.html_url as string,
       url: repo.url as string,
       // Note: team_id is left null initially based on your schema
     });

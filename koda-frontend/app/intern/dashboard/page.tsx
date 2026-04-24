@@ -4,6 +4,7 @@ import JoinBatchGatekeeperModal from '@/components/join-batch-gatekeeper-modal';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { internsApi } from '@/lib/api/interns';
 
 export default function InternDashboardRedirect() {
   const router = useRouter();
@@ -20,8 +21,7 @@ export default function InternDashboardRedirect() {
       return;
     }
 
-    const storedBatchId = typeof window !== 'undefined' ? localStorage.getItem('userBatchId') : null;
-    const assignedBatchId = user?.batchId ?? user?.batch_id ?? storedBatchId;
+    const assignedBatchId = user?.batchId ?? user?.batch_id;
 
     if (assignedBatchId) {
       setShowJoinModal(false);
@@ -37,10 +37,20 @@ export default function InternDashboardRedirect() {
   }
 
   const handleJoinBatch = async ({ batchCode, school }: { batchCode: string; school: string }) => {
-    localStorage.setItem('userBatchId', batchCode.trim());
-    localStorage.setItem('userSchool', school.trim());
-    setShowJoinModal(false);
-    router.replace('/interns/dashboard');
+    try {
+      // 1. Call real API to join batch in database
+      await internsApi.join(batchCode.trim(), school.trim());
+      
+      // 2. Fallback for school (as it is not yet in the schema but used for UI display)
+      localStorage.setItem('userSchool', school.trim());
+      
+      // 3. Clear modal and redirect
+      setShowJoinModal(false);
+      window.location.href = '/interns/dashboard'; // Full reload to refresh user state
+    } catch (err: any) {
+      console.error('Failed to join batch:', err);
+      alert(err.message || 'Failed to join batch. Please check your code.');
+    }
   };
 
   return (

@@ -4,6 +4,7 @@ export interface InternRecord {
   id: string;
   user_id: string;
   team_id: string | null;
+  school: string | null;
   created_at: string | null;
   user: {
     id: string;
@@ -84,6 +85,14 @@ export const internsApi = {
   async remove(id: string): Promise<void> {
     return requestJson<void>(`/interns/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  async join(joinCode: string, school?: string): Promise<InternRecord> {
+    return requestJson<InternRecord>('/interns/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ joinCode, school }),
     });
   },
 };
