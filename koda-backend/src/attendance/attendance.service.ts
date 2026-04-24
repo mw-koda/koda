@@ -40,6 +40,12 @@ type UserRow = {
   github_username: string | null;
 };
 
+type TeamMemberRow = {
+  user_id: string;
+  team_id: string;
+  role: string;
+};
+
 @Injectable()
 export class AttendanceService {
   constructor(private readonly supabaseService: SupabaseService) {}
@@ -136,6 +142,50 @@ export class AttendanceService {
       (usersResult.data ?? []).map((user) => [user.id, user]),
     );
 
+    const teamMembersResult = (await supabase
+      .from('team_members')
+      .select('user_id,team_id,role')
+      .in('user_id', userIds)
+      .eq('role', 'intern')) as unknown as {
+      data: TeamMemberRow[] | null;
+      error: { message: string } | null;
+    };
+
+    if (teamMembersResult.error) {
+      throw new BadRequestException(teamMembersResult.error.message);
+    }
+
+    const teamIdByUserId = new Map<string, string>();
+    for (const member of teamMembersResult.data ?? []) {
+      if (!teamIdByUserId.has(member.user_id)) {
+        teamIdByUserId.set(member.user_id, member.team_id);
+      }
+    }
+
+    const memberTeamIds = Array.from(
+      new Set((teamMembersResult.data ?? []).map((member) => member.team_id)),
+    );
+
+    const allTeamIds = Array.from(new Set([...teamIds, ...memberTeamIds]));
+
+    if (allTeamIds.length > 0 && allTeamIds.length !== teamIds.length) {
+      const allTeamsResult = (await supabase
+        .from('teams')
+        .select('id,name')
+        .in('id', allTeamIds)) as unknown as {
+        data: TeamRow[] | null;
+        error: { message: string } | null;
+      };
+
+      if (allTeamsResult.error) {
+        throw new BadRequestException(allTeamsResult.error.message);
+      }
+
+      teamNameById = new Map(
+        (allTeamsResult.data ?? []).map((team) => [team.id, team.name]),
+      );
+    }
+
     const activeInternIds = interns.map((intern) => intern.id);
     const attendanceResult = (await supabase
       .from('attendance')
@@ -171,9 +221,12 @@ export class AttendanceService {
             user?.name?.trim() ||
             user?.github_username?.trim() ||
             'Unknown Intern',
-          team: intern.team_id
-            ? (teamNameById.get(intern.team_id) ?? 'Unassigned')
-            : 'Unassigned',
+          team:
+            (teamIdByUserId.get(intern.user_id) ?? intern.team_id)
+              ? (teamNameById.get(
+                  teamIdByUserId.get(intern.user_id) ?? intern.team_id ?? '',
+                ) ?? 'Unassigned')
+              : 'Unassigned',
           clockIn: attendance?.time_in ?? null,
           clockOut: attendance?.time_out ?? null,
           status: attendance?.time_in ? 'present' : 'pending',
