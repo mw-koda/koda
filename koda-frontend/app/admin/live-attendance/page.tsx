@@ -2,14 +2,18 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { getAttendanceLogsByDate, interns } from '@/lib/mock-data';
+import { attendanceApi, type LiveAttendanceRow } from '@/lib/api/attendance';
 import { batchesApi } from '@/lib/api/batches';
 import { ArrowUpDown, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-function formatTime(dateStr: string) {
+function formatTime(dateStr: string | null) {
+  if (!dateStr) {
+    return '--';
+  }
+
   return new Date(dateStr).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -25,6 +29,7 @@ type AttendanceRow = {
   internName: string;
   team: string;
   clockIn: string | null;
+  status: AttendanceStatus;
 };
 
 export default function AdminLiveAttendancePage() {
@@ -38,6 +43,9 @@ export default function AdminLiveAttendancePage() {
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [batchName, setBatchName] = useState<string | null>(null);
+  const [rows, setRows] = useState<AttendanceRow[]>([]);
+  const [rowsLoading, setRowsLoading] = useState(false);
+  const [rowsError, setRowsError] = useState<string | null>(null);
   const [statusById, setStatusById] = useState<Record<string, AttendanceStatus>>({});
   const [clockInById, setClockInById] = useState<Record<string, string>>({});
   const [noteById, setNoteById] = useState<Record<string, string>>({});
@@ -70,23 +78,42 @@ export default function AdminLiveAttendancePage() {
     void loadBatchName();
   }, [batchId, isMounted]);
 
-  const rows = useMemo<AttendanceRow[]>(() => {
-    const logsByIntern = new Map(
-      getAttendanceLogsByDate(selectedDate).map((log) => [log.internId, log])
-    );
+  useEffect(() => {
+    if (!isMounted || !batchId) {
+      return;
+    }
 
-    return interns
-      .map((intern) => {
-        const log = logsByIntern.get(intern.id);
-        return {
-          id: intern.id,
-          internName: intern.name,
-          team: intern.team,
-          clockIn: log?.clockIn || null,
-        };
-      })
-      .sort((a, b) => a.internName.localeCompare(b.internName));
-  }, [selectedDate]);
+    const loadAttendance = async () => {
+      setRowsLoading(true);
+      setRowsError(null);
+      setStatusById({});
+      setClockInById({});
+      setNoteById({});
+
+      try {
+        const response = await attendanceApi.findLiveByBatch(batchId, selectedDate);
+        const nextRows: AttendanceRow[] = response.rows.map((row: LiveAttendanceRow) => ({
+          id: row.internId,
+          internName: row.internName,
+          team: row.team,
+          clockIn: row.clockIn,
+          status: row.status,
+        }));
+        setRows(nextRows);
+      } catch (requestError: unknown) {
+        setRows([]);
+        setRowsError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'Failed to load live attendance.',
+        );
+      } finally {
+        setRowsLoading(false);
+      }
+    };
+
+    void loadAttendance();
+  }, [batchId, isMounted, selectedDate]);
 
   const filteredAndSortedRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -98,8 +125,8 @@ export default function AdminLiveAttendancePage() {
 
     const withIndex = searchedRows.map((row, index) => ({ row, index }));
     withIndex.sort((a, b) => {
-      const aStatus = statusById[a.row.id] || 'pending';
-      const bStatus = statusById[b.row.id] || 'pending';
+      const aStatus = statusById[a.row.id] || a.row.status;
+      const bStatus = statusById[b.row.id] || b.row.status;
       const aValue =
         sortConfig.key === 'status'
           ? aStatus
@@ -255,7 +282,7 @@ export default function AdminLiveAttendancePage() {
             <tbody className="divide-y divide-border-color">
               {filteredAndSortedRows.length > 0 ? (
                 filteredAndSortedRows.map((row) => {
-                  const status = statusById[row.id] || 'pending';
+                  const status = statusById[row.id] || row.status;
                   const clockIn = status === 'absent'
                     ? null
                     : status === 'present'
@@ -267,7 +294,7 @@ export default function AdminLiveAttendancePage() {
                         {row.internName}
                       </td>
                       <td className="px-6 py-4 text-sm text-text-muted">
-                        {clockIn ? formatTime(clockIn) : '--'}
+                        {formatTime(clockIn)}
                       </td>
                       <td className="px-6 py-4 text-sm text-text-muted">
                         {row.team}
@@ -325,7 +352,11 @@ export default function AdminLiveAttendancePage() {
                     colSpan={6}
                     className="px-6 py-12 text-center text-sm text-text-muted"
                   >
-                    No attendance records found for this date.
+                    {rowsLoading
+                      ? 'Loading attendance records...'
+                      : rowsError
+                        ? `Failed to load attendance: ${rowsError}`
+                        : 'No attendance records found for this date.'}
                   </td>
                 </tr>
               )}

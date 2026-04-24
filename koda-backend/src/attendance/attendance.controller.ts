@@ -34,8 +34,17 @@ export class AttendanceController {
     return this.attendanceService.timeOutForUser(user.id);
   }
 
+  @Get('live')
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.TEAM_LEAD)
+  async getLiveAttendanceByBatch(
+    @Query('batchId', ParseUUIDPipe) batchId: string,
+    @Query('date') date?: string,
+  ) {
+    return this.attendanceService.getLiveAttendanceByBatch(batchId, date);
+  }
+
   @Get(':internId')
-  @Roles(Role.COORDINATOR, Role.TEAM_LEAD, Role.INTERN)
+  @Roles(Role.ADMIN, Role.COORDINATOR, Role.TEAM_LEAD, Role.INTERN)
   async getInternAttendance(
     @Param('internId', ParseUUIDPipe) internId: string,
     @CurrentUser() user: UserRecord,

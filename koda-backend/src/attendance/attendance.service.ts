@@ -19,9 +19,174 @@ type AttendanceFilters = {
   to?: string;
 };
 
+type TeamRow = {
+  id: string;
+  name: string;
+};
+
+type BatchInternRow = {
+  intern_id: string;
+};
+
+type InternRow = {
+  id: string;
+  user_id: string;
+  team_id: string | null;
+};
+
+type UserRow = {
+  id: string;
+  name: string | null;
+  github_username: string | null;
+};
+
 @Injectable()
 export class AttendanceService {
   constructor(private readonly supabaseService: SupabaseService) {}
+
+  async getLiveAttendanceByBatch(batchId: string, date?: string) {
+    const { startIso, endIso, dateLabel } = this.getDayRange(date);
+    const supabase = this.supabaseService.getClient();
+
+    const batchInternsResult = (await supabase
+      .from('batch_interns')
+      .select('intern_id')
+      .eq('batch_id', batchId)) as unknown as {
+      data: BatchInternRow[] | null;
+      error: { message: string } | null;
+    };
+
+    if (batchInternsResult.error) {
+      throw new BadRequestException(batchInternsResult.error.message);
+    }
+
+    const internIds = (batchInternsResult.data ?? []).map(
+      (row) => row.intern_id,
+    );
+
+    if (internIds.length === 0) {
+      return {
+        batchId,
+        date: dateLabel,
+        rows: [],
+      };
+    }
+
+    const internsResult = (await supabase
+      .from('interns')
+      .select('id,user_id,team_id')
+      .in('id', internIds)) as unknown as {
+      data: InternRow[] | null;
+      error: { message: string } | null;
+    };
+
+    if (internsResult.error) {
+      throw new BadRequestException(internsResult.error.message);
+    }
+
+    const interns = internsResult.data ?? [];
+    if (interns.length === 0) {
+      return {
+        batchId,
+        date: dateLabel,
+        rows: [],
+      };
+    }
+
+    const teamIds = Array.from(
+      new Set(interns.map((intern) => intern.team_id).filter(Boolean)),
+    ) as string[];
+
+    let teamNameById = new Map<string, string>();
+    if (teamIds.length > 0) {
+      const teamsResult = (await supabase
+        .from('teams')
+        .select('id,name')
+        .in('id', teamIds)) as unknown as {
+        data: TeamRow[] | null;
+        error: { message: string } | null;
+      };
+
+      if (teamsResult.error) {
+        throw new BadRequestException(teamsResult.error.message);
+      }
+
+      teamNameById = new Map(
+        (teamsResult.data ?? []).map((team) => [team.id, team.name]),
+      );
+    }
+
+    const userIds = Array.from(
+      new Set(interns.map((intern) => intern.user_id).filter(Boolean)),
+    );
+
+    const usersResult = (await supabase
+      .from('users')
+      .select('id,name,github_username')
+      .in('id', userIds)) as unknown as {
+      data: UserRow[] | null;
+      error: { message: string } | null;
+    };
+
+    if (usersResult.error) {
+      throw new BadRequestException(usersResult.error.message);
+    }
+
+    const usersById = new Map<string, UserRow>(
+      (usersResult.data ?? []).map((user) => [user.id, user]),
+    );
+
+    const activeInternIds = interns.map((intern) => intern.id);
+    const attendanceResult = (await supabase
+      .from('attendance')
+      .select('*')
+      .in('intern_id', activeInternIds)
+      .gte('time_in', startIso)
+      .lt('time_in', endIso)
+      .order('time_in', { ascending: false })) as unknown as {
+      data: AttendanceRow[] | null;
+      error: { message: string } | null;
+    };
+
+    if (attendanceResult.error) {
+      throw new BadRequestException(attendanceResult.error.message);
+    }
+
+    const latestByInternId = new Map<string, AttendanceRow>();
+    for (const row of attendanceResult.data ?? []) {
+      if (!latestByInternId.has(row.intern_id)) {
+        latestByInternId.set(row.intern_id, row);
+      }
+    }
+
+    const rows = interns
+      .map((intern) => {
+        const user = usersById.get(intern.user_id);
+        const attendance = latestByInternId.get(intern.id);
+
+        return {
+          internId: intern.id,
+          userId: intern.user_id,
+          internName:
+            user?.name?.trim() ||
+            user?.github_username?.trim() ||
+            'Unknown Intern',
+          team: intern.team_id
+            ? (teamNameById.get(intern.team_id) ?? 'Unassigned')
+            : 'Unassigned',
+          clockIn: attendance?.time_in ?? null,
+          clockOut: attendance?.time_out ?? null,
+          status: attendance?.time_in ? 'present' : 'pending',
+        };
+      })
+      .sort((a, b) => a.internName.localeCompare(b.internName));
+
+    return {
+      batchId,
+      date: dateLabel,
+      rows,
+    };
+  }
 
   async timeInForUser(userId: string) {
     const internId = await this.getInternIdByUserId(userId);
@@ -189,6 +354,46 @@ export class AttendanceService {
       renderedHours: row.rendered_hours,
       createdAt: row.created_at,
       isOpen: row.time_out === null,
+    };
+  }
+
+  private getDayRange(date?: string): {
+    startIso: string;
+    endIso: string;
+    dateLabel: string;
+  } {
+    let baseDate: Date;
+
+    if (date) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        throw new BadRequestException('date must be formatted as YYYY-MM-DD.');
+      }
+
+      baseDate = new Date(`${date}T00:00:00.000Z`);
+      if (Number.isNaN(baseDate.getTime())) {
+        throw new BadRequestException('date must be a valid calendar date.');
+      }
+    } else {
+      const now = new Date();
+      baseDate = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      );
+    }
+
+    const start = new Date(
+      Date.UTC(
+        baseDate.getUTCFullYear(),
+        baseDate.getUTCMonth(),
+        baseDate.getUTCDate(),
+      ),
+    );
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
+
+    return {
+      startIso: start.toISOString(),
+      endIso: end.toISOString(),
+      dateLabel: start.toISOString().slice(0, 10),
     };
   }
 }
