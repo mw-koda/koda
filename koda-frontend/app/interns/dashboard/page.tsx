@@ -1,7 +1,6 @@
 'use client';
 
 import JoinBatchGatekeeperModal from '@/components/join-batch-gatekeeper-modal';
-import { useCurrentUser } from '@/hooks/use-current-user';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useInternDashboard } from '@/hooks/use-intern-dashboard';
+import { useInterns } from '@/hooks/use-interns';
 import { internsApi } from '@/lib/api/interns';
 
 function StatCard({
@@ -108,16 +108,18 @@ function formatDuration(totalMinutes: number) {
   return `${hours}h ${minutes}m`;
 }
 
-function getInitials(name: string | null | undefined) {
-  if (!name) return '??';
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-}
-
 export default function InternDashboardPage() {
   const { interns, recentIssues, openIssuesCount, closedIssuesCount, internReports, isLoading, error, user } = useInternDashboard();
   
   const [isMounted, setIsMounted] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [summaryBatchId, setSummaryBatchId] = useState<string | undefined>(undefined);
+
+  const {
+    interns: statusInterns,
+    isLoading: isStatusLoading,
+    error: statusError,
+  } = useInterns(summaryBatchId);
 
   const currentIntern = useMemo(() => {
     if (!user) return null;
@@ -137,6 +139,7 @@ export default function InternDashboardPage() {
     const assignedBatchId = user?.batchId ?? user?.batch_id ?? storedBatchId;
 
     setShowJoinModal(!assignedBatchId);
+    setSummaryBatchId(assignedBatchId ? String(assignedBatchId) : undefined);
   }, [isLoading, isMounted, user]);
 
   if (!isMounted || isLoading) {
@@ -306,44 +309,50 @@ export default function InternDashboardPage() {
         <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
           Intern Status Summary
         </h2>
-        {interns.length > 0 ? (
+        {isStatusLoading ? (
+          <p className="text-sm text-text-muted text-center py-6">
+            Loading intern status summary...
+          </p>
+        ) : statusError ? (
+          <p className="text-sm text-red-400 text-center py-6">
+            Failed to load intern status summary.
+          </p>
+        ) : statusInterns.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {interns.map((intern) => {
-              const internReps = internReports[intern.id] || [];
-              const latestReport = [...internReps].sort(
-                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              )[0];
-
+            {statusInterns.map((intern) => {
               return (
                 <Link key={intern.id} href={`/interns/${intern.id}`}>
                   <div className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/50 transition-all card-glow cursor-pointer">
                     <div className="flex items-start gap-3">
                       <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
                         <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
-                          {getInitials(intern.name || intern.github_username)}
+                          {intern.avatarInitials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-text-primary truncate">
-                          {intern.name || intern.github_username || 'Unknown'}
+                          {intern.name}
                         </h3>
-                        <p className="text-xs text-text-muted mb-2">{intern.role || 'Intern'}</p>
+                        <p className="text-xs text-text-muted mb-2">@{intern.github}</p>
                         <div className="mb-2 flex items-center gap-2">
                           <Badge
                             variant="outline"
                             className={`text-xs ${
-                              latestReport?.status === 'reviewed'
+                              intern.reportStatus === 'reviewed'
                                 ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
-                                : latestReport?.status === 'pending' || latestReport?.status === 'draft'
+                                : intern.reportStatus === 'pending'
                                   ? 'bg-text-muted/10 text-text-muted border-text-muted/30'
                                   : 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
                             }`}
                           >
-                            {latestReport?.status ?? 'No Reports'}
+                            {intern.reportStatus}
                           </Badge>
                         </div>
                         <p className="text-xs text-text-muted truncate">
-                          Recent report: {latestReport ? `${new Date(latestReport.period_start).toLocaleDateString()} - ${new Date(latestReport.period_end).toLocaleDateString()}` : 'No submitted report yet'}
+                          Recent report: {intern.assignedPeriod}
+                        </p>
+                        <p className="text-xs text-text-muted">
+                          Latest submit: {intern.latestReportSubmittedAt ? formatTimestamp(intern.latestReportSubmittedAt) : 'No reports yet'}
                         </p>
                       </div>
                     </div>
