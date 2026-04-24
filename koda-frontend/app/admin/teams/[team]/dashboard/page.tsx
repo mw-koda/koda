@@ -1,24 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { teamsApi, type TeamDashboardData, type TeamDetail } from '@/lib/api/teams';
-import { 
-  Activity, 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock, 
-  ExternalLink, 
-  Zap,
+import { cn } from '@/lib/utils';
+import {
+  Activity,
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
   PanelRightClose,
   PanelRightOpen,
-  Terminal
+  Terminal,
+  Zap
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 function generateTeamCode(teamId: string) {
   const normalized = teamId.replace(/[^a-z0-9]/gi, '').toUpperCase();
@@ -69,13 +70,23 @@ export default function AdminTeamDashboardPage() {
   const issues = dashboard?.recentIssues ?? [];
   const logs = dashboard?.logs ?? [];
 
-  return (
+return (
     <div className="flex h-full min-h-screen bg-transparent transition-all duration-500 ease-in-out">
       {/* MAIN CONTENT AREA */}
       <div className={cn(
         "flex-1 p-8 space-y-8 transition-all duration-500",
         isSidebarOpen ? "pr-4" : "pr-8"
       )}>
+        {/* 1. BACK BUTTON ADDED HERE */}
+        <Link
+          href="/admin/batches"
+          className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-text-muted hover:text-accent-primary transition-colors w-fit group mb-4"
+        >
+          <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
+          Back to Batch Management
+        </Link>
+
+        {/* 2. HEADER SECTION */}
         <div className="flex justify-between items-start">
           <div className="flex flex-col gap-1">
             <h1 className="text-4xl font-display font-bold text-text-primary tracking-tight">
@@ -99,6 +110,8 @@ export default function AdminTeamDashboardPage() {
             {isSidebarOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
           </Button>
         </div>
+
+        {/* Rest of your content continues below... */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard label="Open Issues" value={String(metrics?.openIssues ?? 0)} subtext="Needs assignment" icon={<AlertCircle className="h-4 w-4 text-accent-primary" />} />

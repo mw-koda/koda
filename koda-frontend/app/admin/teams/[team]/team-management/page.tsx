@@ -150,14 +150,13 @@ export default function AdminTeamManagementPage() {
 
   return (
       <div className="p-8 space-y-6">
-        <link
-        href="/admin/batches"
-        className="inline-flex items-center gap-2 text-sm font-medium text-text-muted hover:text-accent-primary transition-colors w-fit group mb-2"
-        >
-          <ArrowLeft className="w-4 h-4 tansition-transform group-hover:-translate-x-1" />
-          Back to Batch Management
-        </link>
-        
+              <Link
+                href="/admin/batches"
+                className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-text-muted hover:text-accent-primary transition-colors w-fit group mb-4"
+              >
+                <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
+                Back to Batch Management
+              </Link>
       <div>
         <h1 className="text-3xl font-mono font-bold text-text-primary">
           {team.name} Team Management
