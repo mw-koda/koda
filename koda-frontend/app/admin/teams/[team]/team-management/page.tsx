@@ -1,10 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -12,8 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getUsers, type ApiUser } from '@/lib/api/users';
 import { teamsApi, type TeamDetail } from '@/lib/api/teams';
+import { getUsers, type ApiUser } from '@/lib/api/users';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const roleOptions: Array<'intern' | 'coordinator' | 'team_lead'> = [
   'intern',
@@ -148,7 +149,15 @@ export default function AdminTeamManagementPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+      <div className="p-8 space-y-6">
+        <link
+        href="/admin/batches"
+        className="inline-flex items-center gap-2 text-sm font-medium text-text-muted hover:text-accent-primary transition-colors w-fit group mb-2"
+        >
+          <ArrowLeft className="w-4 h-4 tansition-transform group-hover:-translate-x-1" />
+          Back to Batch Management
+        </link>
+        
       <div>
         <h1 className="text-3xl font-mono font-bold text-text-primary">
           {team.name} Team Management
