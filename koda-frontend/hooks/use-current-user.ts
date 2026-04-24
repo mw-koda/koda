@@ -14,6 +14,7 @@ export type CurrentUser = {
   github_username: string;
   avatar_url: string | null;
   is_onboarded: boolean;
+  intern_id?: string | null;
   batchId?: string | null;
   batch_id?: string | null;
   school?: string | null;

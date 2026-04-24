@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   ParseUUIDPipe,
@@ -34,12 +35,20 @@ export class AttendanceController {
   }
 
   @Get(':internId')
-  @Roles(Role.COORDINATOR, Role.TEAM_LEAD)
+  @Roles(Role.COORDINATOR, Role.TEAM_LEAD, Role.INTERN)
   async getInternAttendance(
     @Param('internId', ParseUUIDPipe) internId: string,
+    @CurrentUser() user: UserRecord,
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
+    // If the user is an intern, they can only view their own attendance.
+    if (user.role === Role.INTERN && user.intern_id !== internId) {
+      throw new ForbiddenException(
+        'You can only view your own attendance data.',
+      );
+    }
+
     if (from && Number.isNaN(new Date(from).getTime())) {
       throw new BadRequestException('from must be a valid date/time.');
     }

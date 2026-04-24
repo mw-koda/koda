@@ -9,12 +9,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   TrendingUp,
   TrendingDown,
-  Users,
+  ShieldCheck,
   FileText,
   GitPullRequest,
 } from 'lucide-react';
-import { interns, issues, reports, roleToUserMap, getAttendanceByInternId, getReportsByInternId } from '@/lib/mock-data';
 import Link from 'next/link';
+import { useInternDashboard } from '@/hooks/use-intern-dashboard';
+import { internsApi } from '@/lib/api/interns';
 
 function StatCard({
   title,
@@ -27,7 +28,7 @@ function StatCard({
   value: string | number;
   change: string;
   icon: any;
-  trend: 'up' | 'down';
+  trend: 'up' | 'down' | 'neutral';
 }) {
   return (
     <Card className="bg-bg-surface border-border-color p-6 card-glow">
@@ -40,11 +41,11 @@ function StatCard({
           <div className="flex items-center gap-1">
             {trend === 'up' ? (
               <TrendingUp className="h-3 w-3 text-accent-primary" />
-            ) : (
+            ) : trend === 'down' ? (
               <TrendingDown className="h-3 w-3 text-accent-danger" />
-            )}
+            ) : null}
             <span
-              className={`text-xs ${trend === 'up' ? 'text-accent-primary' : 'text-accent-danger'}`}
+              className={`text-xs ${trend === 'up' ? 'text-accent-primary' : trend === 'down' ? 'text-accent-danger' : 'text-text-muted'}`}
             >
               {change}
             </span>
@@ -59,12 +60,13 @@ function StatCard({
 }
 
 function getStatusBadgeClass(status: string) {
-  switch (status) {
+  switch (status?.toLowerCase()) {
     case 'open':
       return 'bg-accent-secondary/10 text-accent-secondary border-accent-secondary/30';
     case 'closed':
       return 'bg-accent-primary/10 text-accent-primary border-accent-primary/30';
     case 'in-progress':
+    case 'in_progress':
       return 'bg-accent-warning/10 text-accent-warning border-accent-warning/30';
     default:
       return 'bg-text-muted/10 text-text-muted border-text-muted/30';
@@ -106,19 +108,21 @@ function formatDuration(totalMinutes: number) {
   return `${hours}h ${minutes}m`;
 }
 
+function getInitials(name: string | null | undefined) {
+  if (!name) return '??';
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+}
+
 export default function InternDashboardPage() {
-  const { user, isLoading } = useCurrentUser();
+  const { interns, recentIssues, openIssuesCount, closedIssuesCount, internReports, isLoading, error, user } = useInternDashboard();
+  
   const [isMounted, setIsMounted] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
 
   const currentIntern = useMemo(() => {
-    const currentUser = roleToUserMap.intern;
-    return (
-      interns.find(
-        (intern) => intern.github === currentUser.github || intern.name === currentUser.name
-      ) || interns[0] || null
-    );
-  }, []);
+    if (!user) return null;
+    return interns.find((i) => i.id === user.id || i.github_username === user.github_username) || null;
+  }, [interns, user]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -140,9 +144,16 @@ export default function InternDashboardPage() {
   }
 
   const handleJoinBatch = async ({ batchCode, school }: { batchCode: string; school: string }) => {
-    localStorage.setItem('userBatchId', batchCode.trim());
-    localStorage.setItem('userSchool', school.trim());
-    setShowJoinModal(false);
+    try {
+      await internsApi.join(batchCode.trim(), school.trim());
+      localStorage.setItem('userBatchId', batchCode.trim());
+      localStorage.setItem('userSchool', school.trim());
+      setShowJoinModal(false);
+      window.location.reload(); // Refresh to update user state with new school/batch
+    } catch (err: any) {
+      console.error('Failed to join batch:', err);
+      alert(err.message || 'Failed to join batch. Please check your code.');
+    }
   };
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -152,12 +163,28 @@ export default function InternDashboardPage() {
     day: 'numeric',
   });
 
-  const pendingReports = reports.filter((r) => r.status === 'pending').length;
-  const openIssues = issues.filter((i) => i.status === 'open').length;
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center items-center h-full">
+        <div className="text-text-muted animate-pulse">Loading dashboard data...</div>
+      </div>
+    );
+  }
 
-  const recentIssues = [...issues]
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 4);
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-500/10 text-red-500 border border-red-500/30 p-4 rounded-lg">
+          Error loading dashboard: {error}
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate pending reports across all interns in the batch
+  const pendingReportsCount = Object.values(internReports)
+    .flat()
+    .filter(r => r.status === 'pending' || r.status === 'draft').length;
 
   return (
     <div className="p-8">
@@ -170,38 +197,36 @@ export default function InternDashboardPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-4xl font-mono font-bold text-text-primary mb-2">
-              {currentIntern?.team ?? 'Intern Team'}
+              {currentIntern?.role || 'Intern'} Dashboard
             </h1>
-            <p className="text-text-primary">{currentIntern?.school ?? 'School not assigned'}</p>
+            <p className="text-text-primary">{user?.school_name || user?.school || 'School not assigned'}</p>
             <p className="text-text-muted">{today}</p>
           </div>
-
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard
-          title="Total Interns"
-          value={interns.length}
-          change="+2 this month"
-          icon={Users}
-          trend="up"
+          title="Tasks Done"
+          value={closedIssuesCount}
+          change="Completed by you"
+          icon={ShieldCheck}
+          trend="neutral"
         />
         <StatCard
           title="Reports Pending"
-          value={pendingReports}
-          change="-1 from last week"
+          value={pendingReportsCount}
+          change="Across batch"
           icon={FileText}
-          trend="down"
+          trend="neutral"
         />
         <StatCard
           title="Open GitHub Issues"
-          value={openIssues}
-          change="+3 this week"
+          value={openIssuesCount}
+          change="Current open tasks"
           icon={GitPullRequest}
-          trend="up"
+          trend="neutral"
         />
- 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -210,7 +235,7 @@ export default function InternDashboardPage() {
             Recent GitHub Activity Feed
           </h2>
           <div className="space-y-3">
-            {recentIssues.map((issue) => (
+            {recentIssues.length > 0 ? recentIssues.map((issue) => (
               <div
                 key={issue.id}
                 className="flex items-start gap-3 p-3 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-colors"
@@ -223,21 +248,25 @@ export default function InternDashboardPage() {
                     </p>
                     <Badge
                       variant="outline"
-                      className={`text-xs flex-shrink-0 ${getStatusBadgeClass(issue.status)}`}
+                      className={`text-xs flex-shrink-0 ${getStatusBadgeClass(issue.state)}`}
                     >
-                      {issue.status}
+                      {issue.state?.replace('_', ' ')}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
-                    <span className="font-mono">{issue.repo}</span>
+                    <span className="font-mono">Repository</span>
                     <span>•</span>
-                    <span>{issue.assignee}</span>
+                    <span>{issue.assignee_name || issue.assignee_username || 'Unassigned'}</span>
                     <span>•</span>
-                    <span>{formatTimestamp(issue.updatedAt)}</span>
+                    <span>{formatTimestamp(issue.updated_at || issue.created_at || new Date().toISOString())}</span>
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm text-text-muted text-center py-6">
+                No recent activity found.
+              </p>
+            )}
           </div>
           <Link
             href="/issues"
@@ -257,17 +286,7 @@ export default function InternDashboardPage() {
                 Total Hours/Minutes Served
               </p>
               <p className="text-2xl font-mono font-semibold text-text-primary mt-2">
-                {formatDuration(
-                  interns.reduce(
-                    (total, intern) =>
-                      total +
-                      getAttendanceByInternId(intern.id).reduce(
-                        (sum, log) => sum + log.minutesWorked,
-                        0
-                      ),
-                    0
-                  )
-                )}
+                0h 0m
               </p>
             </div>
             <button className="px-3 py-1.5 text-xs font-semibold text-text-primary border border-border-color rounded-md hover:bg-bg-elevated transition-colors">
@@ -276,69 +295,24 @@ export default function InternDashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {interns.length > 0 && getAttendanceByInternId(interns[0].id).length > 0 ? (
-              [...getAttendanceByInternId(interns[0].id)]
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .slice(0, 2)
-                .map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-4 bg-bg-elevated rounded-lg border border-border-color"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-text-primary">
-                        {formatDate(log.date)}
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className="text-xs bg-accent-primary/10 text-accent-primary border-accent-primary/30"
-                      >
-                        {formatDuration(log.minutesWorked)}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                      <div>
-                        <p className="text-xs text-text-muted">In</p>
-                        <p className="text-sm text-text-primary font-mono">
-                          {formatTime(log.clockIn)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-text-muted">Out</p>
-                        <p className="text-sm text-text-primary font-mono">
-                          {formatTime(log.clockOut)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 mt-3">
-                      <p className="text-xs text-text-muted">
-                        {log.location}
-                      </p>
-                      <button className="px-2.5 py-1 text-xs font-semibold text-accent-primary border border-accent-primary/30 rounded-md hover:bg-accent-primary/10 transition-colors">
-                        View EOD
-                      </button>
-                    </div>
-                  </div>
-                ))
-            ) : (
-              <p className="text-sm text-text-muted text-center py-6">
-                No attendance logs found.
-              </p>
-            )}
+             <p className="text-sm text-text-muted text-center py-6">
+                No attendance logs found. Attendance tracking is coming soon.
+             </p>
           </div>
         </Card>
       </div>
-
 
       <Card className="bg-bg-surface border-border-color p-6">
         <h2 className="text-xl font-mono font-semibold text-text-primary mb-4">
           Intern Status Summary
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {interns.map((intern) => (
-            (() => {
-              const latestReport = [...getReportsByInternId(intern.id)]
-                .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+        {interns.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {interns.map((intern) => {
+              const internReps = internReports[intern.id] || [];
+              const latestReport = [...internReps].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              )[0];
 
               return (
                 <Link key={intern.id} href={`/interns/${intern.id}`}>
@@ -346,40 +320,43 @@ export default function InternDashboardPage() {
                     <div className="flex items-start gap-3">
                       <Avatar className="h-12 w-12 bg-bg-base border border-border-color">
                         <AvatarFallback className="bg-accent-primary/10 text-accent-primary font-mono font-semibold">
-                          {intern.avatarInitials}
+                          {getInitials(intern.name || intern.github_username)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-text-primary truncate">
-                          {intern.name}
+                          {intern.name || intern.github_username || 'Unknown'}
                         </h3>
-                        <p className="text-xs text-text-muted mb-2">{intern.role}</p>
+                        <p className="text-xs text-text-muted mb-2">{intern.role || 'Intern'}</p>
                         <div className="mb-2 flex items-center gap-2">
                           <Badge
                             variant="outline"
                             className={`text-xs ${
                               latestReport?.status === 'reviewed'
                                 ? 'bg-accent-primary/10 text-accent-primary border-accent-primary/30'
-                                : latestReport?.status === 'pending'
+                                : latestReport?.status === 'pending' || latestReport?.status === 'draft'
                                   ? 'bg-text-muted/10 text-text-muted border-text-muted/30'
                                   : 'bg-accent-warning/10 text-accent-warning border-accent-warning/30'
                             }`}
                           >
-                            {latestReport?.status ?? 'submitted'}
+                            {latestReport?.status ?? 'No Reports'}
                           </Badge>
                         </div>
                         <p className="text-xs text-text-muted truncate">
-                          Recent report: {latestReport?.period ?? 'No submitted report yet'}
+                          Recent report: {latestReport ? `${new Date(latestReport.period_start).toLocaleDateString()} - ${new Date(latestReport.period_end).toLocaleDateString()}` : 'No submitted report yet'}
                         </p>
-                        <p className="text-xs text-text-muted">{intern.lastActive}</p>
                       </div>
                     </div>
                   </div>
                 </Link>
               );
-            })()
-          ))}
-        </div>
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-text-muted text-center py-6">
+             No interns found in your batch.
+          </p>
+        )}
       </Card>
     </div>
   );

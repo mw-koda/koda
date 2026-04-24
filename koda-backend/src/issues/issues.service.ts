@@ -92,32 +92,50 @@ export class IssuesService {
     const {
       repo_id,
       state,
+      intern_id,
       period_start,
       period_end,
       page = 1,
       limit = 20,
     } = filter;
 
-    let query = this.client
-      .from('issues')
-      .select(this.ISSUE_SELECT, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1);
+    let query;
+
+    if (intern_id) {
+      // Use the assignment table to find issues for this intern
+      query = this.client
+        .from('issue_assignments')
+        .select(`issues(${this.ISSUE_SELECT})`, { count: 'exact' })
+        .eq('intern_id', intern_id)
+        .order('assigned_at', { ascending: false });
+    } else {
+      query = this.client
+        .from('issues')
+        .select(this.ISSUE_SELECT, { count: 'exact' })
+        .order('created_at', { ascending: false });
+    }
+
+    // Pagination
+    query = query.range((page - 1) * limit, page * limit - 1);
 
     if (repo_id) {
-      query = query.eq('repo_id', repo_id);
+      const field = intern_id ? 'issues.repo_id' : 'repo_id';
+      query = query.eq(field, repo_id);
     }
 
     if (state) {
-      query = query.eq('state', state);
+      const field = intern_id ? 'issues.state' : 'state';
+      query = query.eq(field, state);
     }
 
     if (period_start) {
-      query = query.gte('created_at', period_start);
+      const field = intern_id ? 'issues.created_at' : 'created_at';
+      query = query.gte(field, period_start);
     }
 
     if (period_end) {
-      query = query.lte('created_at', period_end);
+      const field = intern_id ? 'issues.created_at' : 'created_at';
+      query = query.lte(field, period_end);
     }
 
     const { data, error, count } = await query;
@@ -126,8 +144,13 @@ export class IssuesService {
       throw new Error(error.message);
     }
 
+    // Flatten nested response if intern_id was used
+    const results = intern_id
+      ? (data ?? []).flatMap((row: any) => (row.issues ? [row.issues] : []))
+      : (data ?? []);
+
     return {
-      data: (data ?? []).map((i) => this.mapIssue(i)),
+      data: results.map((i) => this.mapIssue(i)),
       total: count,
       page,
       limit,

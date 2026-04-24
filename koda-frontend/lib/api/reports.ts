@@ -15,4 +15,18 @@ export const reportsApi = {
   async findByInternId(internId: string): Promise<ReportRecord[]> {
     return requestJson<ReportRecord[]>(`/reports/intern/${internId}`);
   },
+
+  async submit(data: {
+    intern_id: string;
+    title: string;
+    content: string;
+    period_start: string;
+    period_end: string;
+  }): Promise<ReportRecord> {
+    return requestJson<ReportRecord>('/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  },
 };

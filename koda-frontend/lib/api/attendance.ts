@@ -22,4 +22,16 @@ export const attendanceApi = {
   async findByInternId(internId: string): Promise<AttendanceSummary> {
     return requestJson<AttendanceSummary>(`/attendance/${internId}`);
   },
+
+  async timeIn(): Promise<AttendanceLog> {
+    return requestJson<AttendanceLog>('/attendance/time-in', {
+      method: 'POST',
+    });
+  },
+
+  async timeOut(): Promise<AttendanceLog> {
+    return requestJson<AttendanceLog>('/attendance/time-out', {
+      method: 'POST',
+    });
+  },
 };

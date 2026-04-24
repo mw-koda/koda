@@ -184,7 +184,18 @@ export class InternsService {
   async findOne(id: string): Promise<InternRow> {
     const { data, error } = (await this.db
       .from('interns')
-      .select('*')
+      .select(
+        `
+        *,
+        user:users!interns_user_id_fkey(
+          id,
+          github_username,
+          name,
+          email,
+          avatar_url
+        )
+      `,
+      )
       .eq('id', id)) as {
       data: InternRow[] | null;
       error: Error | null;
@@ -200,6 +211,71 @@ export class InternsService {
     }
 
     return data[0];
+  }
+
+  async join(
+    userId: string,
+    joinCode: string,
+    school?: string,
+  ): Promise<InternRow> {
+    // 1. Resolve batch ID from join code
+    const batchId = await this.resolveBatchId(joinCode);
+    if (!batchId) {
+      throw new BadRequestException('Invalid join code');
+    }
+
+    // 2. Check if user is already an intern
+    const { data: existingIntern } = (await this.db
+      .from('interns')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()) as { data: { id: string } | null };
+
+    let internId = existingIntern?.id;
+
+    // 3. Create or update intern record
+    if (!internId) {
+      const { data: newIntern, error: internError } = (await this.db
+        .from('interns')
+        .insert({ user_id: userId, school })
+        .select('id')
+        .single()) as { data: { id: string } | null; error: Error | null };
+
+      if (internError || !newIntern) {
+        throw new BadRequestException('Failed to create intern record');
+      }
+      internId = newIntern.id;
+    } else if (school) {
+      // Update school if provided and intern already exists
+      const { error: updateError } = await this.db
+        .from('interns')
+        .update({ school })
+        .eq('id', internId);
+
+      if (updateError) {
+        console.error('Failed to update intern school:', updateError);
+      }
+    }
+
+    // 4. Link intern to batch
+    const { error: linkError } = await this.db
+      .from('batch_interns')
+      .upsert(
+        { batch_id: batchId, intern_id: internId },
+        { onConflict: 'intern_id' },
+      );
+
+    if (linkError) {
+      throw new BadRequestException('Failed to link intern to batch');
+    }
+
+    // 5. Update user onboarding status and school_name
+    await this.db
+      .from('users')
+      .update({ is_onboarded: true, school_name: school })
+      .eq('id', userId);
+
+    return this.findOne(internId);
   }
 
   async update(id: string, dto: UpdateInternDto): Promise<InternRow> {

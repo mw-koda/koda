@@ -8,6 +8,7 @@ export type InternListItem = {
   teamId: string | null;
   name: string;
   github: string;
+  school: string | null;
   avatarInitials: string;
   assignedPeriod: string;
   reportStatus: 'pending' | 'submitted' | 'reviewed';
@@ -56,7 +57,7 @@ function formatPeriod(start?: string | null, end?: string | null): string {
   return `${startLabel} - ${endLabel}`;
 }
 
-export function useInterns(_school?: string, batchId?: string) {
+export function useInterns(batchId?: string) {
   const [interns, setInterns] = useState<InternListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -106,6 +107,7 @@ export function useInterns(_school?: string, batchId?: string) {
             teamId: intern.team_id,
             name: user?.name ?? user?.github_username ?? 'Unknown Intern',
             github: user?.github_username ?? 'unknown',
+            school: intern.school ?? null,
             avatarInitials: user ? buildAvatarInitials(user) : 'UN',
             assignedPeriod: formatPeriod(latestReport?.period_start, latestReport?.period_end),
             reportStatus,

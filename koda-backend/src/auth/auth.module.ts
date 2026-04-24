@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -10,6 +10,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { UsersModule } from './users/users.module';
 
+@Global()
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -20,7 +21,7 @@ import { UsersModule } from './users/users.module';
       useFactory: (config: ConfigService): JwtModuleOptions => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: config.get('JWT_EXPIRES_IN') ?? '7d',
+          expiresIn: config.get('JWT_EXPIRES_IN') ?? '365d',
         },
       }),
       inject: [ConfigService],

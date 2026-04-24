@@ -1,31 +1,35 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import InternProfileView from '@/components/InternProfileView';
-import { interns, roleToUserMap } from '@/lib/mock-data';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 export default function InternProfilePage() {
-  const [selectedRole, setSelectedRole] = useState<keyof typeof roleToUserMap>('intern');
+  const { user, isLoading } = useCurrentUser();
 
-  useEffect(() => {
-    const role = (localStorage.getItem('selectedRole') || 'intern') as keyof typeof roleToUserMap;
-    setSelectedRole(role);
-  }, []);
-
-  const currentUser = roleToUserMap[selectedRole] || roleToUserMap.intern;
-  const canManageReports = selectedRole === 'intern';
-  const internId = useMemo(() => {
-    const match = interns.find(
-      (intern) => intern.github === currentUser.github || intern.name === currentUser.name
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg-base p-8">
+        <div className="flex items-center gap-3 text-text-muted font-mono animate-pulse">
+          <div className="h-4 w-4 rounded-full border-2 border-accent-primary/20 border-t-accent-primary animate-spin" />
+          Loading profile...
+        </div>
+      </div>
     );
-    return match?.id || interns[0]?.id;
-  }, [currentUser]);
+  }
+
+  if (!user || !user.intern_id) {
+    return (
+      <div className="p-8 text-center text-text-muted">
+        Intern record not found. Please join a batch first.
+      </div>
+    );
+  }
 
   return (
     <InternProfileView
-      internId={internId}
+      internId={user.intern_id}
       backLabel="Dashboard"
-      canManageReports={canManageReports}
+      canManageReports={true}
     />
   );
 }
