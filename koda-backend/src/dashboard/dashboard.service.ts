@@ -8,7 +8,6 @@ import {
   ActivityDto,
   DashboardStatsDto,
   GetDashboardQueryDto,
-  PerformanceTrendDto,
 } from './dto';
 
 type ReportRow = {
@@ -24,13 +23,6 @@ type IssueRow = {
   state: string;
   created_at: string | null;
   closed_at: string | null;
-};
-
-type PerformanceRow = {
-  id: string;
-  intern_id: string;
-  score: number;
-  evaluated_at: string | null;
 };
 
 @Injectable()
@@ -57,59 +49,6 @@ export class DashboardService {
       openIssues,
       averageScore,
     };
-  }
-
-  async getPerformanceTrend(
-    query: GetDashboardQueryDto,
-  ): Promise<PerformanceTrendDto[]> {
-    const teamId = query.teamId;
-    const internIds = teamId ? await this.getInternIdsByTeam(teamId) : null;
-
-    if (internIds && internIds.length === 0) {
-      return [];
-    }
-
-    const supabase = this.supabaseService.getClient();
-    let trendQuery = supabase
-      .from('performance_metrics')
-      .select('score, evaluated_at, intern_id')
-      .order('evaluated_at', { ascending: true });
-
-    if (internIds) {
-      trendQuery = trendQuery.in('intern_id', internIds);
-    }
-
-    const { data, error } = await trendQuery;
-
-    if (error) {
-      this.handleSupabaseError('Failed to fetch performance trend', error);
-    }
-
-    // Group scores by ISO week so trend points remain consistent across years.
-    const weeklyAggregates = new Map<string, { sum: number; count: number }>();
-
-    for (const row of (data ?? []) as PerformanceRow[]) {
-      if (typeof row.score !== 'number' || !row.evaluated_at) {
-        continue;
-      }
-
-      const week = this.getIsoWeekKey(row.evaluated_at);
-      if (!week) {
-        continue;
-      }
-
-      const aggregate = weeklyAggregates.get(week) ?? { sum: 0, count: 0 };
-      aggregate.sum += row.score;
-      aggregate.count += 1;
-      weeklyAggregates.set(week, aggregate);
-    }
-
-    return Array.from(weeklyAggregates.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([week, aggregate]) => ({
-        week,
-        averageScore: aggregate.sum / aggregate.count,
-      }));
   }
 
   async getActivity(query: GetDashboardQueryDto): Promise<ActivityDto[]> {

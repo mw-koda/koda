@@ -116,6 +116,21 @@ export class ReportsService {
     return data?.[0] || null;
   }
 
+  // ---------------- GET ALL REPORTS ----------------
+  async findAll() {
+    const { data, error } = await this.db
+      .from('reports')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      console.error('🔥 FIND ALL REPORTS ERROR:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
   // ---------------- GET REPORTS BY INTERN ----------------
   async findByIntern(internId: string, filters: any) {
     let query = this.db.from('reports').select('*').eq('intern_id', internId);
@@ -162,6 +177,7 @@ export class ReportsService {
   async updateStatus(id: string, status: string) {
     const transitions = {
       draft: ['submitted'],
+      pending: ['reviewed'],
       submitted: ['reviewed'],
       reviewed: [],
     };

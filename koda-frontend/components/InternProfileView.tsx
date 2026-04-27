@@ -92,12 +92,14 @@ type InternProfileViewProps = {
   backLabel?: string;
   internId: string;
   canManageReports?: boolean;
+  canReviewReports?: boolean;
 };
 
 export default function InternProfileView({
   backLabel = 'Intern Management',
   internId,
   canManageReports = false,
+  canReviewReports = false,
 }: InternProfileViewProps) {
   const router = useRouter();
   
@@ -121,6 +123,7 @@ export default function InternProfileView({
   const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null);
   const [forceEodReport, setForceEodReport] = useState(false);
   const [activeReportTab, setActiveReportTab] = useState<'weekly' | 'monthly'>('weekly');
+  const [reviewingReportId, setReviewingReportId] = useState<string | null>(null);
 
   const [isTimingIn, setIsTimingIn] = useState(false);
   const [isTimingOut, setIsTimingOut] = useState(false);
@@ -169,6 +172,22 @@ export default function InternProfileView({
       setAttendance(attendanceData);
     } catch (err) {
       console.error('Failed to refresh attendance:', err);
+    }
+  };
+
+  const handleReviewReport = async (reportId: string) => {
+    setReviewingReportId(reportId);
+    try {
+      await reportsApi.updateStatus(reportId, 'reviewed');
+      await refreshData();
+      if (selectedReport?.id === reportId) {
+        const refreshedReport = (await reportsApi.findByInternId(internId)).find((report) => report.id === reportId) ?? null;
+        setSelectedReport(refreshedReport);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update report status');
+    } finally {
+      setReviewingReportId(null);
     }
   };
 
@@ -365,118 +384,94 @@ export default function InternProfileView({
                 List of all submitted reports and their current status.
               </p>
             </div>
-            {canManageReports && (
-              <div className="flex items-center gap-2 bg-bg-elevated border border-border-color rounded-md p-1">
-                {(['weekly', 'monthly'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveReportTab(tab)}
-                    className={cn(
-                      "px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-widest rounded transition-all",
-                      activeReportTab === tab
-                        ? "bg-accent-primary text-bg-base shadow"
-                        : "text-text-muted hover:text-text-primary"
-                    )}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-2 bg-bg-elevated border border-border-color rounded-md p-1">
+              {(['weekly', 'monthly'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveReportTab(tab)}
+                  className={cn(
+                    "px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-widest rounded transition-all",
+                    activeReportTab === tab
+                      ? "bg-accent-primary text-bg-base shadow"
+                      : "text-text-muted hover:text-text-primary"
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-            {canManageReports ? (
-              (activeReportTab === 'weekly' ? weeklyReports : monthlyReports).length > 0 ? (
-                (activeReportTab === 'weekly' ? weeklyReports : monthlyReports).map((report) => (
-                  <div
-                    key={report.id}
-                    className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-text-primary truncate">
-                          {report.title || 'Untitled Report'}
-                        </p>
-                        <p className="text-xs text-text-muted mt-1">
-                          Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
-                        </p>
-                        <p className="text-[10px] text-text-muted/60 mt-1 uppercase font-mono">
-                          Submitted {new Date(report.submitted_at || '').toLocaleString()}
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] uppercase font-mono px-2 py-0.5 ${getReportStatusClass(report.status)}`}
-                      >
-                        {report.status}
-                      </Badge>
+            {(activeReportTab === 'weekly' ? weeklyReports : monthlyReports).length > 0 ? (
+              (activeReportTab === 'weekly' ? weeklyReports : monthlyReports).map((report) => (
+                <div
+                  key={report.id}
+                  className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-all group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate">
+                        {report.title || 'Untitled Report'}
+                      </p>
+                      <p className="text-xs text-text-muted mt-1">
+                        Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
+                      </p>
+                      <p className="text-[10px] text-text-muted/60 mt-1 uppercase font-mono">
+                        Submitted {new Date(report.submitted_at || '').toLocaleString()}
+                      </p>
                     </div>
-                    <button
-                      className="mt-4 inline-flex items-center gap-2 text-xs font-mono font-bold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => {
-                        setSelectedReport(report);
-                        setIsReportViewOpen(true);
-                      }}
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] uppercase font-mono px-2 py-0.5 ${getReportStatusClass(report.status)}`}
                     >
-                      <ChevronDown className="w-3 h-3" />
-                      Expand Content
-                    </button>
+                      {report.status}
+                    </Badge>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
-                  <FileText className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
-                  <p className="text-sm text-text-muted">
-                    {activeReportTab === 'weekly' ? 'No weekly submissions.' : 'No monthly submissions.'}
-                  </p>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <button
+                        className="inline-flex items-center gap-2 text-xs font-mono font-bold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          setSelectedReport(report);
+                          setIsReportViewOpen(true);
+                        }}
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                        Expand Content
+                      </button>
+
+                      {canReviewReports && report.status !== 'reviewed' && (
+                        <button
+                          type="button"
+                          onClick={() => void handleReviewReport(report.id)}
+                          disabled={reviewingReportId === report.id}
+                          className={cn(
+                            'inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-widest transition-all',
+                            reviewingReportId === report.id
+                              ? 'cursor-not-allowed border-border-color text-text-muted opacity-70'
+                              : 'border-accent-primary/40 text-accent-primary hover:bg-accent-primary/10'
+                          )}
+                        >
+                          {reviewingReportId === report.id ? 'Updating...' : 'Mark Reviewed'}
+                        </button>
+                      )}
+
+                      {canReviewReports && report.status === 'reviewed' && (
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-accent-primary">
+                          Reviewed
+                        </span>
+                      )}
+                    </div>
                 </div>
-              )
+              ))
             ) : (
-              sortedReports.length > 0 ? (
-                sortedReports.map((report) => (
-                  <div
-                    key={report.id}
-                    className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-all group"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-text-primary truncate">
-                          {report.title || 'Untitled Report'}
-                        </p>
-                        <p className="text-xs text-text-muted mt-1">
-                          Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
-                        </p>
-                        <p className="text-[10px] text-text-muted/60 mt-1 uppercase font-mono">
-                          Submitted {new Date(report.submitted_at || '').toLocaleString()}
-                        </p>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] uppercase font-mono px-2 py-0.5 ${getReportStatusClass(report.status)}`}
-                      >
-                        {report.status}
-                      </Badge>
-                    </div>
-                    <button
-                      className="mt-4 inline-flex items-center gap-2 text-xs font-mono font-bold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => {
-                        setSelectedReport(report);
-                        setIsReportViewOpen(true);
-                      }}
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                      Expand Content
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
-                  <FileText className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
-                  <p className="text-sm text-text-muted">No submissions found.</p>
-                </div>
-              )
+              <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
+                <FileText className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
+                <p className="text-sm text-text-muted">
+                  {activeReportTab === 'weekly' ? 'No weekly submissions.' : 'No monthly submissions.'}
+                </p>
+              </div>
             )}
           </div>
         </Card>

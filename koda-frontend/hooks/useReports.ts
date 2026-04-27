@@ -1,40 +1,116 @@
-// src/hooks/useReports.ts
-import { useState, useEffect } from 'react';
-import { interns } from '@/lib/mock-data';
+import { useEffect, useMemo, useState } from 'react';
+import { internsApi, type InternRecord } from '@/lib/api/interns';
+import { reportsApi, type ReportRecord } from '@/lib/api/reports';
 
-// Local mock data for performance since it's missing in lib
-const mockPerformanceData = [
-    { name: 'Karl Tampus', score: 85 },
-    { name: 'Kenneth Ambos', score: 92 },
-    { name: 'Tovi Hermosisima', score: 78 },
-    { name: 'Jhudiel Artizuela', score: 88 },
-    { name: 'Rolando Alvarado', score: 95 },
-];
+export type ReportTab = 'weekly' | 'monthly';
 
-export function useReports(filter: string) {
-    // We use the 'interns' data to simulate reports for the table
-    const [reports, setReports] = useState<any[]>([]);
-    const [performanceData] = useState(mockPerformanceData);
-    const [loading, setLoading] = useState(true);
+export interface ReportRow {
+  id: string;
+  internName: string;
+  title: string;
+  period: string;
+  submittedAt: string;
+  status: 'pending' | 'reviewed' | string;
+  content: string;
+  coordinatorNote: string | null;
+  type: 'weekly' | 'monthly';
+}
 
-    useEffect(() => {
-        // Mapping interns to a "Report" format for your table
-        const mappedReports = interns.map((intern) => ({
-            id: `rep-${intern.id}`,
-            internName: intern.name,
-            date: '2024-03-20', // Mock date
-            type: 'weekly',
-            status: intern.reportStatus, // Uses 'submitted', 'pending', or 'reviewed'
-        }));
+function getReportType(report: ReportRecord): 'weekly' | 'monthly' | null {
+  const title = (report.title || '').toLowerCase();
 
-        if (filter === 'all') {
-            setReports(mappedReports);
-        } else {
-            setReports(mappedReports.filter((r) => r.status === filter));
+  if (title.startsWith('weekly report')) {
+    return 'weekly';
+  }
+
+  if (title.startsWith('monthly report')) {
+    return 'monthly';
+  }
+
+  return null;
+}
+
+function getDisplayName(intern: InternRecord): string {
+  return intern.user?.name?.trim() || intern.user?.github_username?.trim() || `Intern ${intern.id}`;
+}
+
+
+export function useReports(filter: ReportTab) {
+  const [reports, setReports] = useState<ReportRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadReports = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [interns, rawReports] = await Promise.all([
+          internsApi.getAll(),
+          reportsApi.findAll(),
+        ]);
+
+        if (!isActive) {
+          return;
         }
 
-        setLoading(false);
-    }, [filter]);
+        const internNameById = new Map<string, string>(
+          interns.map((intern) => [intern.id, getDisplayName(intern)]),
+        );
 
-    return { reports, performanceData, loading };
+        const mappedReports = rawReports
+          .map((report) => {
+            const type = getReportType(report);
+
+            if (!type) {
+              return null;
+            }
+
+            return {
+              id: report.id,
+              internName: internNameById.get(report.intern_id) ?? `Intern ${report.intern_id}`,
+              title: report.title || 'Untitled Report',
+              period: `${report.period_start ? new Date(report.period_start).toLocaleDateString() : '—'} — ${report.period_end ? new Date(report.period_end).toLocaleDateString() : '—'}`,
+              submittedAt: report.submitted_at || '',
+              status: report.status,
+              content: report.content || '',
+              coordinatorNote: null,
+              type,
+            } satisfies ReportRow;
+          })
+          .filter((report): report is ReportRow => report !== null)
+          .sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
+
+        setReports(
+          filter === 'weekly'
+            ? mappedReports.filter((report) => report.type === 'weekly')
+            : mappedReports.filter((report) => report.type === 'monthly'),
+        );
+      } catch (err: any) {
+        if (!isActive) {
+          return;
+        }
+
+        setError(err?.message || 'Failed to load reports');
+        setReports([]);
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadReports();
+
+    return () => {
+      isActive = false;
+    };
+  }, [filter]);
+
+  const totalReports = useMemo(() => reports.length, [reports]);
+
+  return { reports, loading, error, totalReports };
 }

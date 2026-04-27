@@ -7,7 +7,6 @@ import {
   ActivityDto,
   DashboardStatsDto,
   GetDashboardQueryDto,
-  PerformanceTrendDto,
 } from './dto';
 import { DashboardService } from './dashboard.service';
 
@@ -22,13 +21,6 @@ export class DashboardController {
     @Query() query: GetDashboardQueryDto,
   ): Promise<DashboardStatsDto> {
     return this.dashboardService.getStats(query);
-  }
-
-  @Get('performance-trend')
-  async getPerformanceTrend(
-    @Query() query: GetDashboardQueryDto,
-  ): Promise<PerformanceTrendDto[]> {
-    return this.dashboardService.getPerformanceTrend(query);
   }
 
   @Get('activity')

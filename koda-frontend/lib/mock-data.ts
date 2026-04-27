@@ -59,7 +59,7 @@ export interface Report {
   status: 'pending' | 'reviewed';
   content: string;
   coordinatorNote: string | null;
-  type: 'weekly' | 'daily';
+  type: 'weekly' | 'monthly' | 'daily';
 }
 
 export interface AttendanceLog {
@@ -543,6 +543,28 @@ export const reports: Report[] = [
     coordinatorNote: 'Excellent attention to accessibility. The research phase shows maturity in approach.',
     type: 'weekly',
   },
+  {
+    id: 'rep-11',
+    internId: '1',
+    period: 'March 2024',
+    submittedAt: '2024-03-29T16:45:00Z',
+    score: 91,
+    status: 'reviewed',
+    content: 'Completed the monthly authentication rollout, documented callback behavior, and finalized staging verification notes. Also coordinated fixes for several edge cases discovered during weekly testing cycles.',
+    coordinatorNote: 'Strong monthly summary with clear follow-through and useful documentation.',
+    type: 'monthly',
+  },
+  {
+    id: 'rep-12',
+    internId: '3',
+    period: 'March 2024',
+    submittedAt: '2024-03-30T09:20:00Z',
+    score: null,
+    status: 'pending',
+    content: 'Prepared the monthly design audit, gathered feedback from chart rendering tests, and outlined next steps for responsive refinements. Also consolidated weekly learnings into a single handoff note.',
+    coordinatorNote: null,
+    type: 'monthly',
+  },
 ];
 
 export const attendanceLogs: AttendanceLog[] = [
@@ -892,15 +914,6 @@ export const roleRedirects: Record<UserRole, string> = {
   coordinator: '/coordinator/dashboard',
   admin: '/admin/dashboard',
 };
-
-export const performanceData = [
-  { week: 'Week 1', score: 82 },
-  { week: 'Week 2', score: 85 },
-  { week: 'Week 3', score: 87 },
-  { week: 'Week 4', score: 88 },
-  { week: 'Week 5', score: 89 },
-  { week: 'Week 6', score: 87 },
-];
 
 export const getInternById = (id: string) => interns.find(i => i.id === id);
 export const getIssuesByInternId = (internId: string) => issues.filter(i => i.internId === internId);

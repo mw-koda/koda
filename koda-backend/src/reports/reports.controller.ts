@@ -33,6 +33,12 @@ export class ReportsController {
     return this.service.submit(dto);
   }
 
+  @Get()
+  @Roles(Role.COORDINATOR, Role.TEAM_LEAD, Role.ADMIN)
+  async getAll() {
+    return this.service.findAll();
+  }
+
   @Get('intern/:internId')
   @Roles(Role.INTERN, Role.COORDINATOR, Role.TEAM_LEAD, Role.ADMIN)
   async getByIntern(

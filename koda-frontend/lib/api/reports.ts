@@ -12,8 +12,20 @@ export interface ReportRecord {
 }
 
 export const reportsApi = {
+  async findAll(): Promise<ReportRecord[]> {
+    return requestJson<ReportRecord[]>(`/reports`);
+  },
+
   async findByInternId(internId: string): Promise<ReportRecord[]> {
     return requestJson<ReportRecord[]>(`/reports/intern/${internId}`);
+  },
+
+  async updateStatus(reportId: string, status: 'draft' | 'submitted' | 'reviewed'): Promise<ReportRecord> {
+    return requestJson<ReportRecord>(`/reports/${reportId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
   },
 
   async submit(data: {
