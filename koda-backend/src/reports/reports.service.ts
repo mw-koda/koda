@@ -162,6 +162,7 @@ export class ReportsService {
   async updateStatus(id: string, status: string) {
     const transitions = {
       draft: ['submitted'],
+      pending: ['reviewed'],
       submitted: ['reviewed'],
       reviewed: [],
     };

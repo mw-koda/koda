@@ -16,6 +16,14 @@ export const reportsApi = {
     return requestJson<ReportRecord[]>(`/reports/intern/${internId}`);
   },
 
+  async updateStatus(reportId: string, status: 'draft' | 'submitted' | 'reviewed'): Promise<ReportRecord> {
+    return requestJson<ReportRecord>(`/reports/${reportId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+  },
+
   async submit(data: {
     intern_id: string;
     title: string;
