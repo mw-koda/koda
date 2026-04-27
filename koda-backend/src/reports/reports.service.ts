@@ -18,6 +18,17 @@ export class ReportsService {
     return title.startsWith('eod report');
   }
 
+  private isSingleDayPeriod(dto: any): boolean {
+    if (!dto?.period_start || !dto?.period_end) {
+      return false;
+    }
+
+    const startKey = this.getDateKey(String(dto.period_start));
+    const endKey = this.getDateKey(String(dto.period_end));
+
+    return startKey === endKey;
+  }
+
   private getDateKey(value: string): string {
     const match = value.match(/\d{4}-\d{2}-\d{2}/);
     if (match) {
@@ -33,7 +44,7 @@ export class ReportsService {
   }
 
   private async ensureUniqueEodForDay(dto: any): Promise<void> {
-    if (!this.isEodSubmission(dto)) {
+    if (!this.isEodSubmission(dto) || !this.isSingleDayPeriod(dto)) {
       return;
     }
 
