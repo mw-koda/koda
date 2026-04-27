@@ -25,6 +25,68 @@ import {
 import { reportsApi } from '@/lib/api/reports';
 import { cn } from '@/lib/utils';
 
+const getCurrentMonthValue = () => new Date().toISOString().slice(0, 7);
+
+const getCurrentWeekValue = () => {
+  const today = new Date();
+  const current = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  const dayNumber = current.getUTCDay() || 7;
+
+  current.setUTCDate(current.getUTCDate() - (dayNumber - 1));
+
+  return current.toISOString().split('T')[0];
+};
+
+const getWeekPeriod = (weekStartValue: string) => {
+  const weekStart = new Date(`${weekStartValue}T00:00:00.000Z`);
+
+  if (Number.isNaN(weekStart.getTime())) {
+    return null;
+  }
+
+  // Normalize to Monday to keep weekly submissions bounded to Monday-Friday.
+  const dayNumber = weekStart.getUTCDay() || 7;
+  weekStart.setUTCDate(weekStart.getUTCDate() - (dayNumber - 1));
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekStart.getUTCDate() + 4);
+
+  return {
+    periodStart: weekStart.toISOString().split('T')[0],
+    periodEnd: weekEnd.toISOString().split('T')[0],
+  };
+};
+
+const formatWeekLabel = (weekStartValue: string) => {
+  const weekPeriod = getWeekPeriod(weekStartValue);
+
+  if (!weekPeriod) {
+    return 'Weekly Report';
+  }
+
+  const start = new Date(`${weekPeriod.periodStart}T00:00:00.000Z`);
+  const end = new Date(`${weekPeriod.periodEnd}T00:00:00.000Z`);
+  const dateFormat = { month: 'short', day: 'numeric', year: 'numeric' } as const;
+
+  return `${start.toLocaleDateString('default', dateFormat)} - ${end.toLocaleDateString('default', dateFormat)}`;
+};
+
+const formatMonthLabel = (monthValue: string) => {
+  const [year, month] = monthValue.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleString('default', {
+    month: 'long',
+    year: 'numeric',
+  });
+};
+
+const getMonthPeriod = (monthValue: string) => {
+  const [year, month] = monthValue.split('-').map(Number);
+  const periodStart = new Date(year, month - 1, 1).toISOString().split('T')[0];
+  const periodEnd = new Date(year, month, 0).toISOString().split('T')[0];
+
+  return { periodStart, periodEnd };
+};
+
 // --- SCHEMAS ---
 
 const eodSchema = z.object({
@@ -48,10 +110,9 @@ const weeklySchema = z.object({
   studentId: z.string().min(1, 'Student ID is required'),
   company: z.string().min(1, 'Company is required'),
   department: z.string().min(1, 'Department is required'),
-  companyAddress: z.string().min(1, 'Company address is required'),
+  companyAddress: z.string().optional(),
   supervisor: z.string().min(1, 'Supervisor is required'),
-  periodStarts: z.string().min(1, 'Period start is required'),
-  periodEnds: z.string().min(1, 'Period end is required'),
+  reportWeek: z.string().min(1, 'Week is required'),
   weeklyLog: z.array(z.object({
     day: z.string(),
     timeIn: z.string(),
@@ -66,8 +127,7 @@ const monthlySchema = z.object({
   traineeName: z.string().min(1, 'Trainee name is required'),
   ojtId: z.string().min(1, 'OJT ID is required'),
   companyName: z.string().min(1, 'Company name is required'),
-  periodStarts: z.string().min(1, 'Period start is required'),
-  periodEnds: z.string().min(1, 'Period end is required'),
+  reportMonth: z.string().min(1, 'Month is required'),
   monthlyLog: z.array(z.object({
     week: z.string(),
     workTimes: z.string(),
@@ -141,8 +201,7 @@ export function ReportFormModal({
         { day: 'Thursday', timeIn: '', timeOut: '', totalHours: '', supervisorInitial: '' },
         { day: 'Friday', timeIn: '', timeOut: '', totalHours: '', supervisorInitial: '' },
       ],
-      periodStarts: new Date().toISOString().split('T')[0],
-      periodEnds: new Date().toISOString().split('T')[0],
+      reportWeek: getCurrentWeekValue(),
     }
   });
 
@@ -167,8 +226,7 @@ export function ReportFormModal({
         { week: 'Week 4', workTimes: '', totalHours: '', workAccomplished: '' },
         { week: 'Week 5', workTimes: '', totalHours: '', workAccomplished: '' },
       ],
-      periodStarts: new Date().toISOString().split('T')[0],
-      periodEnds: new Date().toISOString().split('T')[0],
+      reportMonth: getCurrentMonthValue(),
     }
   });
 
@@ -177,16 +235,30 @@ export function ReportFormModal({
     name: 'monthlyLog'
   });
 
+  const selectedWeeklyPeriod = getWeekPeriod(weeklyForm.watch('reportWeek'));
+
   const initializeType = (type: ReportType) => {
+    setError(null);
     setSelectedType(type);
     setStep('form');
     
     // Defer setValue to avoid interrupting the render cycle
     setTimeout(() => {
       const date = new Date().toLocaleDateString();
-      if (type === 'eod') eodForm.setValue('title', `EOD Report - ${date}`);
-      if (type === 'weekly') weeklyForm.setValue('title', `Weekly Report - ${date}`);
-      if (type === 'monthly') monthlyForm.setValue('title', `Monthly Report - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`);
+      if (type === 'eod') {
+        eodForm.setValue('title', `EOD Report - ${date}`);
+        eodForm.setValue('date', new Date().toISOString().split('T')[0]);
+      }
+      if (type === 'weekly') {
+        const currentWeek = getCurrentWeekValue();
+        weeklyForm.setValue('reportWeek', currentWeek);
+        weeklyForm.setValue('title', `Weekly Report - ${formatWeekLabel(currentWeek)}`);
+      }
+      if (type === 'monthly') {
+        const currentMonth = getCurrentMonthValue();
+        monthlyForm.setValue('reportMonth', currentMonth);
+        monthlyForm.setValue('title', `Monthly Report - ${formatMonthLabel(currentMonth)}`);
+      }
     }, 0);
   };
 
@@ -204,6 +276,7 @@ export function ReportFormModal({
 
 
   const submitEod = async (values: z.infer<typeof eodSchema>) => {
+    setError(null);
     setIsSubmitting(true);
     try {
       const content = `
@@ -243,8 +316,16 @@ ${values.plansForTomorrow}
   };
 
   const submitWeekly = async (values: z.infer<typeof weeklySchema>) => {
+    setError(null);
     setIsSubmitting(true);
     try {
+      const weekPeriod = getWeekPeriod(values.reportWeek);
+      if (!weekPeriod) {
+        throw new Error('Please select a valid week start date.');
+      }
+
+      const { periodStart, periodEnd } = weekPeriod;
+      const reportTitle = `Weekly Report - ${formatWeekLabel(values.reportWeek)}`;
       const logTable = values.weeklyLog.map(l => 
         `| ${l.day} | ${l.timeIn} | ${l.timeOut} | ${l.totalHours} | ${l.supervisorInitial} |`
       ).join('\n');
@@ -263,10 +344,10 @@ ${logTable}
 
       await reportsApi.submit({
         intern_id: internId,
-        title: values.title,
+        title: reportTitle,
         content,
-        period_start: values.periodStarts,
-        period_end: values.periodEnds,
+        period_start: periodStart,
+        period_end: periodEnd,
       });
       setStep('success');
       onSuccess?.();
@@ -278,6 +359,7 @@ ${logTable}
   };
 
   const submitMonthly = async (values: z.infer<typeof monthlySchema>) => {
+    setError(null);
     const missingWeeks = values.monthlyLog
       .filter((log) => {
         const hasWorkTime = log.workTimes.trim().length > 0;
@@ -295,6 +377,8 @@ ${logTable}
 
     setIsSubmitting(true);
     try {
+      const { periodStart, periodEnd } = getMonthPeriod(values.reportMonth);
+      const reportTitle = `Monthly Report - ${formatMonthLabel(values.reportMonth)}`;
       const logTable = values.monthlyLog.map(l => 
         `| ${l.week} | ${l.workTimes} | ${l.totalHours} | ${l.workAccomplished} |`
       ).join('\n');
@@ -312,10 +396,10 @@ ${logTable}
 
       await reportsApi.submit({
         intern_id: internId,
-        title: values.title,
+        title: reportTitle,
         content,
-        period_start: values.periodStarts,
-        period_end: values.periodEnds,
+        period_start: periodStart,
+        period_end: periodEnd,
       });
       setStep('success');
       onSuccess?.();
@@ -399,6 +483,15 @@ ${logTable}
               ))}
             </div>
 
+            {error && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
+                <p className="flex items-start gap-2 text-xs text-red-300 font-mono">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4 border-t border-border-color">
               {lockTypeSelection ? (
                 showDoLater ? (
@@ -421,9 +514,16 @@ ${logTable}
 
         {step === 'form' && selectedType === 'weekly' && (
           <form onSubmit={weeklyForm.handleSubmit(submitWeekly)} className="space-y-6 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Period Start</label><Input type="date" {...weeklyForm.register('periodStarts')} /></div>
-              <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Period End</label><Input type="date" {...weeklyForm.register('periodEnds')} /></div>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-mono text-text-muted">Week Start (Monday)</label>
+                <Input type="date" step={7} min="2024-01-01" {...weeklyForm.register('reportWeek')} />
+                {selectedWeeklyPeriod && (
+                  <p className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+                    Period: {selectedWeeklyPeriod.periodStart} to {selectedWeeklyPeriod.periodEnd}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Student Name</label><Input {...weeklyForm.register('studentName')} /></div>
@@ -455,6 +555,15 @@ ${logTable}
               </table>
             </div>
 
+            {error && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
+                <p className="flex items-start gap-2 text-xs text-red-300 font-mono">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" className="flex-1 font-mono uppercase tracking-widest text-xs" onClick={() => setStep('type')}>Back</Button>
               <Button type="submit" className="flex-1 bg-accent-primary text-bg-base hover:bg-accent-primary/90 font-mono uppercase tracking-widest text-xs" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Submit Weekly'}</Button>
@@ -464,9 +573,8 @@ ${logTable}
 
         {step === 'form' && selectedType === 'monthly' && (
           <form onSubmit={monthlyForm.handleSubmit(submitMonthly)} className="space-y-6 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Period Start</label><Input type="date" {...monthlyForm.register('periodStarts')} /></div>
-              <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Period End</label><Input type="date" {...monthlyForm.register('periodEnds')} /></div>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Month</label><Input type="month" {...monthlyForm.register('reportMonth')} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Trainee Name</label><Input {...monthlyForm.register('traineeName')} /></div>
@@ -503,6 +611,15 @@ ${logTable}
             </div>
 
             <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Total Monthly Hours</label><Input placeholder="e.g. 160h" {...monthlyForm.register('totalWorkHours')} /></div>
+
+            {error && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
+                <p className="flex items-start gap-2 text-xs text-red-300 font-mono">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" className="flex-1 font-mono uppercase tracking-widest text-xs" onClick={() => setStep('type')}>Back</Button>

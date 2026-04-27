@@ -60,6 +60,27 @@ function getReportStatusClass(status: string | null) {
   }
 }
 
+function isEodReport(report: ReportRecord) {
+  return (report.title || '').toLowerCase().startsWith('eod report');
+}
+
+function isWeeklyReport(report: ReportRecord) {
+  return (report.title || '').toLowerCase().startsWith('weekly report');
+}
+
+function isMonthlyReport(report: ReportRecord) {
+  return (report.title || '').toLowerCase().startsWith('monthly report');
+}
+
+function toDateKey(value: string | null) {
+  if (!value) return null;
+  const match = value.match(/\d{4}-\d{2}-\d{2}/);
+  if (match) return match[0];
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
 function buildAvatarInitials(name: string | null, github: string): string {
   if (name) {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -99,6 +120,7 @@ export default function InternProfileView({
   const [isReportViewOpen, setIsReportViewOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null);
   const [forceEodReport, setForceEodReport] = useState(false);
+  const [activeReportTab, setActiveReportTab] = useState<'weekly' | 'monthly'>('weekly');
 
   const [isTimingIn, setIsTimingIn] = useState(false);
   const [isTimingOut, setIsTimingOut] = useState(false);
@@ -208,9 +230,40 @@ export default function InternProfileView({
     );
   }, [reports]);
 
+  const eodReports = useMemo(() => {
+    return sortedReports.filter(isEodReport);
+  }, [sortedReports]);
+
+  const nonEodReports = useMemo(() => {
+    return sortedReports.filter((report) => !isEodReport(report));
+  }, [sortedReports]);
+
+  const weeklyReports = useMemo(() => {
+    return nonEodReports.filter(isWeeklyReport);
+  }, [nonEodReports]);
+
+  const monthlyReports = useMemo(() => {
+    return nonEodReports.filter(isMonthlyReport);
+  }, [nonEodReports]);
+
+  const eodReportByDate = useMemo(() => {
+    const map = new Map<string, ReportRecord>();
+    eodReports.forEach((report) => {
+      const reportDateKey = toDateKey(report.period_start);
+      if (reportDateKey) {
+        map.set(reportDateKey, report);
+      }
+    });
+    return map;
+  }, [eodReports]);
+
   const totalMinutes = attendance?.totalHours ? attendance.totalHours * 60 : 0;
   const selectedLog = sortedAttendance.find((log) => log.id === selectedLogId) || null;
   const hasOpenSession = sortedAttendance.some((log) => !log.timeOut);
+  const todayDate = new Date().toISOString().split('T')[0];
+  const hasCompletedSessionToday = sortedAttendance.some(
+    (log) => log.timeOut && log.timeIn.slice(0, 10) === todayDate
+  );
 
   if (isLoading) {
     return (
@@ -303,58 +356,127 @@ export default function InternProfileView({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Reports List */}
         <Card className="bg-bg-surface border-border-color p-6 shadow-xl card-glow">
-          <div className="mb-6">
-            <h2 className="text-xl font-mono font-semibold text-text-primary">
-              Submitted Report List
-            </h2>
-            <p className="text-xs text-text-muted mt-1">
-              List of all submitted reports and their current status.
-            </p>
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-mono font-semibold text-text-primary">
+                Submitted Report List
+              </h2>
+              <p className="text-xs text-text-muted mt-1">
+                List of all submitted reports and their current status.
+              </p>
+            </div>
+            {canManageReports && (
+              <div className="flex items-center gap-2 bg-bg-elevated border border-border-color rounded-md p-1">
+                {(['weekly', 'monthly'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveReportTab(tab)}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-widest rounded transition-all",
+                      activeReportTab === tab
+                        ? "bg-accent-primary text-bg-base shadow"
+                        : "text-text-muted hover:text-text-primary"
+                    )}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-            {sortedReports.length > 0 ? (
-              sortedReports.map((report) => (
-                <div
-                  key={report.id}
-                  className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-all group"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-text-primary truncate">
-                        {report.title || 'Untitled Report'}
-                      </p>
-                      <p className="text-xs text-text-muted mt-1">
-                        Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
-                      </p>
-                      <p className="text-[10px] text-text-muted/60 mt-1 uppercase font-mono">
-                        Submitted {new Date(report.submitted_at || '').toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] uppercase font-mono px-2 py-0.5 ${getReportStatusClass(report.status)}`}
-                    >
-                      {report.status}
-                    </Badge>
-                  </div>
-                  <button 
-                    className="mt-4 inline-flex items-center gap-2 text-xs font-mono font-bold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => {
-                      setSelectedReport(report);
-                      setIsReportViewOpen(true);
-                    }}
+            {canManageReports ? (
+              (activeReportTab === 'weekly' ? weeklyReports : monthlyReports).length > 0 ? (
+                (activeReportTab === 'weekly' ? weeklyReports : monthlyReports).map((report) => (
+                  <div
+                    key={report.id}
+                    className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-all group"
                   >
-                    <ChevronDown className="w-3 h-3" />
-                    Expand Content
-                  </button>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-text-primary truncate">
+                          {report.title || 'Untitled Report'}
+                        </p>
+                        <p className="text-xs text-text-muted mt-1">
+                          Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
+                        </p>
+                        <p className="text-[10px] text-text-muted/60 mt-1 uppercase font-mono">
+                          Submitted {new Date(report.submitted_at || '').toLocaleString()}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] uppercase font-mono px-2 py-0.5 ${getReportStatusClass(report.status)}`}
+                      >
+                        {report.status}
+                      </Badge>
+                    </div>
+                    <button
+                      className="mt-4 inline-flex items-center gap-2 text-xs font-mono font-bold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        setSelectedReport(report);
+                        setIsReportViewOpen(true);
+                      }}
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                      Expand Content
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
+                  <FileText className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
+                  <p className="text-sm text-text-muted">
+                    {activeReportTab === 'weekly' ? 'No weekly submissions.' : 'No monthly submissions.'}
+                  </p>
                 </div>
-              ))
+              )
             ) : (
-              <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
-                <FileText className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
-                <p className="text-sm text-text-muted">No submissions found.</p>
-              </div>
+              sortedReports.length > 0 ? (
+                sortedReports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="p-4 bg-bg-elevated rounded-lg border border-border-color hover:border-accent-primary/30 transition-all group"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-text-primary truncate">
+                          {report.title || 'Untitled Report'}
+                        </p>
+                        <p className="text-xs text-text-muted mt-1">
+                          Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
+                        </p>
+                        <p className="text-[10px] text-text-muted/60 mt-1 uppercase font-mono">
+                          Submitted {new Date(report.submitted_at || '').toLocaleString()}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] uppercase font-mono px-2 py-0.5 ${getReportStatusClass(report.status)}`}
+                      >
+                        {report.status}
+                      </Badge>
+                    </div>
+                    <button
+                      className="mt-4 inline-flex items-center gap-2 text-xs font-mono font-bold text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        setSelectedReport(report);
+                        setIsReportViewOpen(true);
+                      }}
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                      Expand Content
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
+                  <FileText className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
+                  <p className="text-sm text-text-muted">No submissions found.</p>
+                </div>
+              )
             )}
           </div>
         </Card>
@@ -380,11 +502,15 @@ export default function InternProfileView({
 
           <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
             {sortedAttendance.length > 0 ? (
-              sortedAttendance.map((log) => (
-                <div
-                  key={log.id}
-                  className="p-4 bg-bg-elevated rounded-lg border border-border-color relative overflow-hidden"
-                >
+              sortedAttendance.map((log) => {
+                const logDateKey = toDateKey(log.timeIn);
+                const hasEod = !!logDateKey && eodReportByDate.has(logDateKey);
+
+                return (
+                  <div
+                    key={log.id}
+                    className="p-4 bg-bg-elevated rounded-lg border border-border-color relative overflow-hidden"
+                  >
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <p className="text-sm font-semibold text-text-primary">
                       {formatDate(log.timeIn.slice(0, 10))}
@@ -410,8 +536,29 @@ export default function InternProfileView({
                       </p>
                     </div>
                   </div>
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const eodReport = logDateKey ? eodReportByDate.get(logDateKey) : undefined;
+                        if (!eodReport) return;
+                        setSelectedReport(eodReport);
+                        setIsReportViewOpen(true);
+                      }}
+                      disabled={!hasEod}
+                      className={cn(
+                        "inline-flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-widest px-3 py-1.5 rounded border transition-all",
+                        hasEod
+                          ? "border-accent-primary/40 text-accent-primary hover:bg-accent-primary/10"
+                          : "border-border-color text-text-muted cursor-not-allowed"
+                      )}
+                    >
+                      EOD
+                    </button>
+                  </div>
                 </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-12 border-2 border-dashed border-border-color rounded-xl">
                 <Calendar className="w-8 h-8 text-text-muted mx-auto mb-3 opacity-20" />
@@ -467,16 +614,23 @@ export default function InternProfileView({
             <div className="grid gap-3">
               <button
                 onClick={handleTimeIn}
-                disabled={hasOpenSession || isTimingIn}
+                disabled={hasOpenSession || hasCompletedSessionToday || isTimingIn}
                 className={cn(
                   "w-full py-3 px-4 text-sm font-mono font-bold rounded-md transition-all shadow-lg active:scale-95 flex items-center justify-center",
-                  hasOpenSession || isTimingIn
+                  hasOpenSession || hasCompletedSessionToday || isTimingIn
                     ? "bg-bg-elevated border border-border-color text-text-muted cursor-not-allowed shadow-none"
                     : "bg-accent-primary text-bg-base hover:bg-accent-primary/90"
                 )}
               >
                 {isTimingIn ? <Loader2 className="w-4 h-4 animate-spin" /> : 'TIME IN'}
               </button>
+              {hasCompletedSessionToday && (
+                <div className="rounded-md border border-accent-warning/40 bg-accent-warning/10 px-3 py-2 text-center">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-accent-warning">
+                    Sorry, you already completed your attendance today.
+                  </p>
+                </div>
+              )}
               <button
                 onClick={handleTimeOut}
                 disabled={!hasOpenSession || isTimingOut}
