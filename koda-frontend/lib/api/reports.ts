@@ -12,6 +12,10 @@ export interface ReportRecord {
 }
 
 export const reportsApi = {
+  async findAll(): Promise<ReportRecord[]> {
+    return requestJson<ReportRecord[]>(`/reports`);
+  },
+
   async findByInternId(internId: string): Promise<ReportRecord[]> {
     return requestJson<ReportRecord[]>(`/reports/intern/${internId}`);
   },

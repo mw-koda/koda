@@ -915,15 +915,6 @@ export const roleRedirects: Record<UserRole, string> = {
   admin: '/admin/dashboard',
 };
 
-export const performanceData = [
-  { week: 'Week 1', score: 82 },
-  { week: 'Week 2', score: 85 },
-  { week: 'Week 3', score: 87 },
-  { week: 'Week 4', score: 88 },
-  { week: 'Week 5', score: 89 },
-  { week: 'Week 6', score: 87 },
-];
-
 export const getInternById = (id: string) => interns.find(i => i.id === id);
 export const getIssuesByInternId = (internId: string) => issues.filter(i => i.internId === internId);
 export const getReportsByInternId = (internId: string) => reports.filter(r => r.internId === internId);
