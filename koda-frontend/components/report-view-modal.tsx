@@ -168,30 +168,30 @@ export function ReportViewModal({ report, isOpen, onOpenChange }: ReportViewModa
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-bg-surface border-border-color sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-bg-surface border-border-color sm:max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:top-3 [&>button]:right-3 [&>button]:rounded-full [&>button]:border [&>button]:border-border-color [&>button]:bg-bg-elevated [&>button]:text-text-muted [&>button]:hover:bg-bg-surface [&>button]:hover:text-text-primary [&>button]:opacity-100">
         <DialogHeader className="mb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <DialogTitle className="text-text-primary text-xl font-mono mb-2">
-                {report.title || 'Untitled Report'}
-              </DialogTitle>
-              <DialogDescription className="text-text-muted flex flex-col gap-1">
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3" />
-                  Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock className="h-3 w-3" />
-                  Submitted: {new Date(report.submitted_at || '').toLocaleString()}
-                </span>
-              </DialogDescription>
+          <div className="pr-10">
+            <DialogTitle className="text-text-primary text-xl font-mono mb-2">
+              {report.title || 'Untitled Report'}
+            </DialogTitle>
+            <div className="mb-3">
+              <Badge
+                variant="outline"
+                className={`text-xs uppercase font-mono px-3 py-1 ${getReportStatusClass(report.status)}`}
+              >
+                {report.status}
+              </Badge>
             </div>
-            <Badge
-              variant="outline"
-              className={`text-xs uppercase font-mono px-3 py-1 ${getReportStatusClass(report.status)}`}
-            >
-              {report.status}
-            </Badge>
+            <DialogDescription className="text-text-muted flex flex-col gap-1">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-3 w-3" />
+                Period: {new Date(report.period_start || '').toLocaleDateString()} — {new Date(report.period_end || '').toLocaleDateString()}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3 w-3" />
+                Submitted: {new Date(report.submitted_at || '').toLocaleString()}
+              </span>
+            </DialogDescription>
           </div>
         </DialogHeader>
 

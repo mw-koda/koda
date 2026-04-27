@@ -178,13 +178,17 @@ export function ReportFormModal({
   });
 
   const initializeType = (type: ReportType) => {
+    setError(null);
     setSelectedType(type);
     setStep('form');
     
     // Defer setValue to avoid interrupting the render cycle
     setTimeout(() => {
       const date = new Date().toLocaleDateString();
-      if (type === 'eod') eodForm.setValue('title', `EOD Report - ${date}`);
+      if (type === 'eod') {
+        eodForm.setValue('title', `EOD Report - ${date}`);
+        eodForm.setValue('date', new Date().toISOString().split('T')[0]);
+      }
       if (type === 'weekly') weeklyForm.setValue('title', `Weekly Report - ${date}`);
       if (type === 'monthly') monthlyForm.setValue('title', `Monthly Report - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`);
     }, 0);
@@ -204,6 +208,7 @@ export function ReportFormModal({
 
 
   const submitEod = async (values: z.infer<typeof eodSchema>) => {
+    setError(null);
     setIsSubmitting(true);
     try {
       const content = `
@@ -243,6 +248,7 @@ ${values.plansForTomorrow}
   };
 
   const submitWeekly = async (values: z.infer<typeof weeklySchema>) => {
+    setError(null);
     setIsSubmitting(true);
     try {
       const logTable = values.weeklyLog.map(l => 
@@ -278,6 +284,7 @@ ${logTable}
   };
 
   const submitMonthly = async (values: z.infer<typeof monthlySchema>) => {
+    setError(null);
     const missingWeeks = values.monthlyLog
       .filter((log) => {
         const hasWorkTime = log.workTimes.trim().length > 0;
@@ -399,6 +406,15 @@ ${logTable}
               ))}
             </div>
 
+            {error && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
+                <p className="flex items-start gap-2 text-xs text-red-300 font-mono">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4 border-t border-border-color">
               {lockTypeSelection ? (
                 showDoLater ? (
@@ -455,6 +471,15 @@ ${logTable}
               </table>
             </div>
 
+            {error && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
+                <p className="flex items-start gap-2 text-xs text-red-300 font-mono">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" className="flex-1 font-mono uppercase tracking-widest text-xs" onClick={() => setStep('type')}>Back</Button>
               <Button type="submit" className="flex-1 bg-accent-primary text-bg-base hover:bg-accent-primary/90 font-mono uppercase tracking-widest text-xs" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Submit Weekly'}</Button>
@@ -503,6 +528,15 @@ ${logTable}
             </div>
 
             <div className="space-y-1"><label className="text-[10px] uppercase font-mono text-text-muted">Total Monthly Hours</label><Input placeholder="e.g. 160h" {...monthlyForm.register('totalWorkHours')} /></div>
+
+            {error && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2">
+                <p className="flex items-start gap-2 text-xs text-red-300 font-mono">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" className="flex-1 font-mono uppercase tracking-widest text-xs" onClick={() => setStep('type')}>Back</Button>

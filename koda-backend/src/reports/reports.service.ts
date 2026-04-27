@@ -13,8 +13,64 @@ export class ReportsService {
     return this.supabase.getClient();
   }
 
+  private isEodSubmission(dto: any): boolean {
+    const title = String(dto?.title ?? '').trim().toLowerCase();
+    return title.startsWith('eod report');
+  }
+
+  private getDateKey(value: string): string {
+    const match = value.match(/\d{4}-\d{2}-\d{2}/);
+    if (match) {
+      return match[0];
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException('Invalid EOD date.');
+    }
+
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  private async ensureUniqueEodForDay(dto: any): Promise<void> {
+    if (!this.isEodSubmission(dto)) {
+      return;
+    }
+
+    if (!dto?.period_start) {
+      throw new BadRequestException('EOD report date is required.');
+    }
+
+    const dateKey = this.getDateKey(String(dto.period_start));
+    const dayStart = new Date(`${dateKey}T00:00:00.000Z`);
+    const nextDay = new Date(dayStart);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+    const { data, error } = await this.db
+      .from('reports')
+      .select('id')
+      .eq('intern_id', dto.intern_id)
+      .ilike('title', 'EOD Report%')
+      .gte('period_start', dayStart.toISOString())
+      .lt('period_start', nextDay.toISOString())
+      .limit(1);
+
+    if (error) {
+      console.error('🔥 EOD DUPLICATE CHECK ERROR:', error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      throw new BadRequestException(
+        'You already submitted an EOD report for this date.',
+      );
+    }
+  }
+
   // ---------------- SUBMIT REPORT ----------------
   async submit(dto: any) {
+    await this.ensureUniqueEodForDay(dto);
+
     // Validate unique period per intern
     const { data: existing, error: checkError } = await this.db
       .from('reports')
