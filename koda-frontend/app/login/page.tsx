@@ -6,10 +6,50 @@ import { Github } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 // import { mockAuthConfig, roleRedirects } from '@/lib/mock-data';
 import { getPublicApiBaseUrl } from '@/lib/public-config';
+import {
+  DEFAULT_DEMO_PERSONA,
+  DEMO_MODE,
+  DEMO_PERSONAS,
+  DEMO_SESSION_LEAK_KEYS,
+  type DemoPersonaKey,
+} from '@/lib/demo/config';
+import { tokenForPersona } from '@/lib/demo/auth-token';
+import { resetDb } from '@/lib/demo/db';
 
 const API_URL = getPublicApiBaseUrl();
+
+// Demo mode: stale join-modal keys would leak between personas.
+function clearDemoSessionKeys() {
+  for (const key of DEMO_SESSION_LEAK_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Ignore storage errors in demo mode.
+    }
+  }
+}
+
 export default function LoginPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState<DemoPersonaKey>(DEFAULT_DEMO_PERSONA);
+
+  const handleDemoLogin = () => {
+    const token = tokenForPersona(selectedPersona);
+    if (!token) {
+      return;
+    }
+
+    setIsLoading(true);
+    clearDemoSessionKeys();
+    router.push(`/auth/callback?token=${encodeURIComponent(token)}`);
+  };
+
+  const handleDemoReset = () => {
+    resetDb();
+    clearDemoSessionKeys();
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-bg-surface via-bg-elevated to-bg-surface overflow-hidden flex items-center justify-center">
@@ -47,9 +87,63 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* Demo persona picker (demo mode only) */}
+          {DEMO_MODE && (
+            <div className="mb-6">
+              <p className="mb-3 text-center text-[10px] font-mono uppercase tracking-widest text-text-muted">
+                Choose a demo persona
+              </p>
+              <div
+                role="radiogroup"
+                aria-label="Demo persona"
+                className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-5"
+              >
+                {DEMO_PERSONAS.map((persona) => {
+                  const isSelected = persona.key === selectedPersona;
+
+                  return (
+                    <button
+                      key={persona.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      data-demo-role={persona.key}
+                      disabled={isLoading}
+                      onClick={() => setSelectedPersona(persona.key)}
+                      className={`rounded-xl border px-3 py-3 text-left transition-all duration-200 ${
+                        isSelected
+                          ? 'border-accent-primary bg-accent-primary/10 shadow-lg shadow-accent-primary/10'
+                          : 'border-border-color/40 bg-bg-elevated/60 hover:border-accent-primary/50'
+                      }`}
+                    >
+                      <span
+                        className={`block text-[10px] font-mono uppercase tracking-wider ${
+                          isSelected ? 'text-accent-primary' : 'text-text-muted'
+                        }`}
+                      >
+                        {persona.role}
+                      </span>
+                      <span className="mt-1 block text-sm font-semibold text-text-primary">
+                        {persona.label}
+                      </span>
+                      <span className="mt-1 block text-[11px] leading-snug text-text-muted">
+                        {persona.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Login Button */}
           <Button
             onClick={() => {
+              if (DEMO_MODE) {
+                handleDemoLogin();
+                return;
+              }
+
               setIsLoading(true);
               window.location.href = `${API_URL}/auth/github`;
             }}
@@ -71,6 +165,21 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
+
+        {/* Demo mode footer */}
+        {DEMO_MODE && (
+          <div className="-mt-4 flex items-center justify-center gap-2 text-xs font-mono text-text-muted/70">
+            <span>Demo mode · sample data</span>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={handleDemoReset}
+              className="text-accent-primary/80 underline-offset-4 transition-colors hover:text-accent-primary hover:underline"
+            >
+              Reset demo data
+            </button>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-8 text-center">

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/lib/demo/install';
 import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
